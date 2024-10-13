@@ -1,7 +1,8 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
-import { auth } from "../firebaseConfig/FirebaseConfig";
+import { auth, db } from "../firebaseConfig/FirebaseConfig";
 import { toast } from "react-toastify";
+import { doc, getDoc } from "firebase/firestore"; 
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -10,15 +11,39 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("User logged in Successfully");
-      window.location.href = "/map";
-      toast.success("User logged in Successfully", {
-        position: "top-center",
-      });
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      
+      const userDocRef = doc(db, "Users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userType = userDoc.data().userType;
+        console.log("User logged in successfully, User Type: ", userType);
+
+        
+        if (userType === "Customer") {
+          window.location.href = "/cust-dash";
+        } else if (userType === "Driver") {
+          window.location.href = "/driver-dash";
+        }
+
+        
+        toast.success("User logged in successfully", {
+          position: "top-center",
+        });
+      } else {
+        console.log("No user data found in Firestore.");
+        toast.error("User type not found. Please try again.", {
+          position: "bottom-center",
+        });
+      }
     } catch (error) {
       console.log(error.message);
 
+     
       toast.error(error.message, {
         position: "bottom-center",
       });
@@ -59,7 +84,6 @@ function Login() {
       <p className="forgot-password text-right">
         New user <a href="/register">Register Here</a>
       </p>
-      {/* <SignInwithGoogle/> */}
     </form>
   );
 }

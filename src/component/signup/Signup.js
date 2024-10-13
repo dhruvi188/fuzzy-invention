@@ -11,6 +11,7 @@ function Register() {
   const [lname, setLname] = useState("");
   const [phone, setPhone] = useState(0);
   const [usertype, setUser] = useState("");
+  const [vehicle, setVehicle] = useState("None");
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -25,6 +26,7 @@ function Register() {
           lastName: lname,
           phone: phone,
           userType: usertype,
+          vehicleType: vehicle,
           photo:""
         });
       }
@@ -95,6 +97,18 @@ function Register() {
         <option value="Customer">Customer</option>
         </select>
       </div>
+
+      {usertype == "Driver" &&
+      <div className="mb-3">
+        <label>Vehicle Type</label>
+        <select className="form-control" onChange={(e) => setVehicle(e.target.value)}>
+        <option value="">Select an option</option>
+        <option value="Car">Car</option>
+        <option value="Truck">Truck</option>
+        <option value="2 Wheeler">2 Wheeler</option>
+        </select>
+      </div>
+      }
 
       <div className="mb-3">
         <label>Password</label>
