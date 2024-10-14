@@ -1,12 +1,12 @@
 import {
-    Box,
-    Flex,
-    SkeletonText,
-    Text,
-  } from '@chakra-ui/react';
+  Box,
+  Flex,
+  SkeletonText,
+  Text,
+} from '@chakra-ui/react';
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, database, db } from '../firebaseConfig/FirebaseConfig';
-import { ref, onValue, update } from 'firebase/database';
+import { ref, onValue, update, remove, set } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import {
   useJsApiLoader,
@@ -19,6 +19,7 @@ const center = { lat: 28.5162618, lng: 77.1216273 };
 
 export default function DriverDash() {
   const [rideRequests, setRideRequests] = useState([]);
+  const [driverLocation, setDriverLocation] = useState(null);
   const [selectedRide, setSelectedRide] = useState(null);
   const [directionsResponse, setDirectionsResponse] = useState(null);
   const [distance, setDistance] = useState('');
@@ -36,17 +37,15 @@ export default function DriverDash() {
     try {
       const userDocRef = doc(db, 'Users', auth.currentUser.uid);
       const userDoc = await getDoc(userDocRef);
-      console.log("hihihi", userDoc.data());
       if (userDoc.exists()) {
-        setDriverVehicleType(oldval => userDoc.data().vehicleType);
-        console.log("hihihi", driverVehicleType);
+        setDriverVehicleType(userDoc.data().vehicleType);
       }
     } catch (error) {
       console.error('Error fetching driver vehicle type:', error);
     }
   };
-  useEffect(() => {
 
+  useEffect(() => {
     fetchDriverVehicleType();
   }, []);
 
@@ -59,10 +58,10 @@ export default function DriverDash() {
           id: childSnapshot.key,
           ...childSnapshot.val(),
         };
-        
-        console.log("req", request.vehicle);
-        fetchDriverVehicleType();
-        if (request.vehicle === driverVehicleType) {
+        if (
+          request.vehicle === driverVehicleType &&
+          (request.status === 'pending' || request.driverId === auth.currentUser.uid)
+        ) {
           requests.push(request);
         }
       });
@@ -72,16 +71,92 @@ export default function DriverDash() {
     return () => unsubscribe();
   }, [driverVehicleType]);
 
+  const updateDriverLocation = (requestId) => {
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newLocation = { latitude, longitude };
+          setDriverLocation(newLocation);
+          const locationRef = ref(database, `ride_requests/${requestId}/driverLocation`);
+          set(locationRef, newLocation);
+        },
+        (error) => {
+          console.error('Error updating location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+            // Store the watchId to clear it later
+            return watchId;
+          }
+        };
+
+  // const updateDriverLocation = (requestId) => {
+  //   if (navigator.geolocation) {
+  //     navigator.geolocation.watchPosition(
+  //       (position) => {
+  //         const { latitude, longitude } = position.coords;
+  //         const locationRef = ref(database, `ride_requests/${requestId}/driverLocation`);
+  //         update(locationRef, {
+  //           latitude,
+  //           longitude,
+  //         });
+  //       },
+  //       (error) => {
+  //         console.error('Error updating location:', error);
+  //       },
+  //       {
+  //         enableHighAccuracy: true,
+  //       }
+  //     );
+  //   }
+  // };
+
   const handleAcceptRide = async (requestId) => {
     try {
       const rideRequestRef = ref(database, `ride_requests/${requestId}`);
       await update(rideRequestRef, {
         status: 'accepted',
         driverId: auth.currentUser.uid,
+        driverContact: auth.currentUser.phoneNumber || "Not provided",
+        driverName: auth.currentUser.displayName || "Driver"
       });
       alert('Ride accepted!');
+      const watchId = updateDriverLocation(requestId);
+      // Store watchId in state or ref to clear it when needed
     } catch (error) {
       console.error('Error accepting ride:', error);
+    }
+  };
+
+  const handleCollected = async (requestId) => {
+    try {
+      const rideRequestRef = ref(database, `ride_requests/${requestId}`);
+      await update(rideRequestRef, {
+        status: 'collected',
+      });
+      alert('Goods collected!');
+    } catch (error) {
+      console.error('Error updating ride status to collected:', error);
+    }
+  };
+
+  const handleDelivered = async (requestId) => {
+    try {
+      const rideRequestRef = ref(database, `ride_requests/${requestId}`);
+      await update(rideRequestRef, {
+        status: 'delivered',
+      });
+      // After marking as delivered, delete the ride request
+      await remove(rideRequestRef);
+      alert('Goods delivered, request deleted!');
+      setRideRequests(rideRequests.filter((ride) => ride.id !== requestId));
+    } catch (error) {
+      console.error('Error updating ride status to delivered:', error);
     }
   };
 
@@ -154,6 +229,16 @@ export default function DriverDash() {
                 {request.status === 'pending' && (
                   <button onClick={() => handleAcceptRide(request.id)}>
                     Accept Ride
+                  </button>
+                )}
+                {request.status === 'accepted' && request.driverId === auth.currentUser.uid && (
+                  <button onClick={() => handleCollected(request.id)}>
+                    Goods Collected
+                  </button>
+                )}
+                {request.status === 'collected' && request.driverId === auth.currentUser.uid && (
+                  <button onClick={() => handleDelivered(request.id)}>
+                    Goods Delivered
                   </button>
                 )}
               </li>

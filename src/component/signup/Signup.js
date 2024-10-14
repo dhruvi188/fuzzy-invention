@@ -1,24 +1,30 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig/FirebaseConfig";
-import { setDoc, doc } from "firebase/firestore";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fname, setFname] = useState("");
   const [lname, setLname] = useState("");
-  const [phone, setPhone] = useState(0);
+  const [phone, setPhone] = useState("");
   const [usertype, setUser] = useState("");
-  const [vehicle, setVehicle] = useState("None");
+  const [vehicle, setVehicle] = useState("");
 
-  const handleRegister = async (e) => {
+  const navigate = useNavigate(); // Use navigate for redirection
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      const user = auth.currentUser;
-      console.log(user);
+      // Create the user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // If user is created, save additional data to Firestore
       if (user) {
         await setDoc(doc(db, "Users", user.uid), {
           email: user.email,
@@ -27,13 +33,19 @@ function Register() {
           phone: phone,
           userType: usertype,
           vehicleType: vehicle,
-          photo:""
+          photo: ""
         });
+
+        // Success message
+        toast.success("User registered successfully! Redirecting to login...", {
+          position: "top-center",
+        });
+
+        // Redirect to login page after sign-up
+        setTimeout(() => {
+          navigate("/login"); // Redirect user to login after successful sign-up
+        }, 2000); // Add a slight delay before redirecting to login
       }
-      console.log("User Registered Successfully!!");
-      toast.success("User Registered Successfully!!", {
-        position: "top-center",
-      });
     } catch (error) {
       console.log(error.message);
       toast.error(error.message, {
@@ -43,7 +55,7 @@ function Register() {
   };
 
   return (
-    <form onSubmit={handleRegister}>
+    <form onSubmit={handleSubmit}>
       <h3>Sign Up</h3>
 
       <div className="mb-3">
@@ -52,8 +64,8 @@ function Register() {
           type="text"
           className="form-control"
           placeholder="First name"
+          value={fname}
           onChange={(e) => setFname(e.target.value)}
-          required
         />
       </div>
 
@@ -63,6 +75,7 @@ function Register() {
           type="text"
           className="form-control"
           placeholder="Last name"
+          value={lname}
           onChange={(e) => setLname(e.target.value)}
         />
       </div>
@@ -73,21 +86,32 @@ function Register() {
           type="email"
           className="form-control"
           placeholder="Enter email"
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
         />
       </div>
 
       <div className="mb-3">
-        <label>Phone no</label>
+        <label>Password</label>
         <input
-          type="phone"
+          type="password"
           className="form-control"
-          placeholder="Enter Phone No"
-          onChange={(e) => setPhone(e.target.value)}
-          required
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
-      </div>   
+      </div>
+
+      <div className="mb-3">
+        <label>Phone Number</label>
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Enter phone number"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+      </div>
 
       <div className="mb-3">
         <label>Sign Up as</label>
@@ -110,26 +134,16 @@ function Register() {
       </div>
       }
 
-      <div className="mb-3">
-        <label>Password</label>
-        <input
-          type="password"
-          className="form-control"
-          placeholder="Enter password"
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-
       <div className="d-grid">
         <button type="submit" className="btn btn-primary">
           Sign Up
         </button>
       </div>
       <p className="forgot-password text-right">
-        Already registered <a href="/login">Login</a>
+        Already registered <a href="/login">sign in?</a>
       </p>
     </form>
   );
 }
+
 export default Register;

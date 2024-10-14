@@ -36,3 +36,49 @@
     transform: rotate(360deg);
   }
 }
+
+/* Top-right menu container */
+.top-right-menu {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999; /* Ensure it overlaps with other elements */
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent white background */
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  gap: 10px;
+}
+
+/* User name styling */
+.user-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-right: 10px;
+}
+
+/* Logout button styling */
+.logout-button {
+  background-color: transparent;
+  color: #f44336;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: #ffe6e6; /* Light red when hovered */
+}
+
+/* Ensures that the logout and user info is visible over the map or other content */
+.logout-button,
+.user-name {
+  z-index: 2;
+}
+

@@ -3,7 +3,7 @@ import "./App.css";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./component/login/Login";
 import SignUp from "./component/signup/Signup";
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { auth } from "./component/firebaseConfig/FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
@@ -11,11 +11,25 @@ import { db } from './component/firebaseConfig/FirebaseConfig';
 import MapConfig from './component/map/Map';
 import CustDash from './component/Customer-dashboard/CustDash';
 import DriverDash from './component/Driver-dashboard/DriverDash';
+import { signOut } from "firebase/auth";
 
 function App() {
   const [user, setUser] = useState(null); 
   const [userType, setUserType] = useState(null);
   const [loading, setLoading] = useState(true); 
+  const [userInfo, setUserInfo] = useState({ firstName: "", lastName: "" });
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Logged out successfully!", {
+        position: "top-center",
+      });
+      setUser(null); 
+    } catch (error) {
+      console.error("Error logging out: ", error);
+    }
+  };
 
   const ProtectedRoute = ({ children, redirectTo, condition }) => {
    
@@ -37,7 +51,9 @@ function App() {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            setUserType(userDoc.data().userType);
+            const userData = userDoc.data();
+            setUserType(userData.userType);
+            setUserInfo({ firstName: userData.firstName, lastName: userData.lastName });
           } else {
             console.log("No user data found in Firestore!");
           }
@@ -45,6 +61,7 @@ function App() {
           console.error("Error fetching user data from Firestore:", error);
         }
       } else {
+        setUserInfo({ firstName: "", lastName: "" });
         setUser(null);
         setUserType(null); 
       }
@@ -65,6 +82,14 @@ function App() {
       <div className="App">
         <div className="auth-wrapper">
           <div className="auth-inner">
+          {user && (
+              <div className="top-right-menu">
+                <span className="user-name">{`${userInfo.firstName} ${userInfo.lastName}`}</span>
+                <button className="logout-button" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+            )}
             <Routes>
               
               <Route
