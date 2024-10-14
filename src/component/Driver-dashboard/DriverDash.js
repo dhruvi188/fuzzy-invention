@@ -19,10 +19,11 @@ export default function DriverDash() {
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
   const [driverVehicleType, setDriverVehicleType] = useState(null);
-  const [ id, setId ] = useState(0);
-  const [ markers, setMarkers ] = useState([]);
-  const [ drawMarker, setDrawMarker ] = useState(false);
-  const [location, setLocation] = useState(null)
+  // const [ id, setId ] = useState(0);
+  // const [ markers, setMarkers ] = useState([]);
+  // const [ drawMarker, setDrawMarker ] = useState(false);
+  const [location, setLocation] = useState(null);
+  const locationIntervalRef = useRef(null);
   // const [markerPosition, setMarkerPosition] = useState(null);
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
@@ -42,17 +43,45 @@ export default function DriverDash() {
       console.error("Error fetching driver vehicle type:", error);
     }
   };
+  function updateLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          setLocation(newLocation);
+          console.log(`Updated location: Latitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}`);
+       
+        },
+        (error) => {
+          console.error("Error getting location:", error.message);
+        }
+      );
+    } else {
+      console.log("Geolocation not supported");
+    }
+  }
+  useEffect(() => {
+    // Initial location update
+    updateLocation();
 
+    // Set up interval to update location every 10 seconds
+    locationIntervalRef.current = setInterval(updateLocation, 10000);
+
+    // Clean up function to clear the interval when the component unmounts
+    return () => {
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current);
+      }
+    };
+  }, []);
   useEffect(() => {
     fetchDriverVehicleType();
   }, []);
 
-    useEffect(() => {
-      while(true){
-        setTimeout(20000);
-        console.log("heeheheheheheheh");
-      }
-    },[])
+  
   
   useEffect(() => {
     const rideRequestsRef = ref(database, "ride_requests");
@@ -77,27 +106,27 @@ export default function DriverDash() {
     return () => unsubscribe();
   }, [driverVehicleType]);
 
-  function handleLocationClick() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(success, error);
-    } else {
-      console.log("Geolocation not supported");
-    }
-  }
+  // function handleLocationClick() {
+  //   if (navigator.geolocation) {
+  //     navigator.geolocation.getCurrentPosition(success, error);
+  //   } else {
+  //     console.log("Geolocation not supported");
+  //   }
+  // }
 
-  function success(position) {
-    const latitude = position.coords.latitude;
-    const longitude = position.coords.longitude;
-    setLocation({ latitude, longitude });
-    console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
+  // function success(position) {
+  //   const latitude = position.coords.latitude;
+  //   const longitude = position.coords.longitude;
+  //   setLocation({ latitude, longitude });
+  //   console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
 
-    // Make API call to OpenWeatherMap
+  //   // Make API call to OpenWeatherMap
 
-  }
+  // }
 
-  function error() {
-    console.log("Unable to retrieve your location");
-  }
+  // function error() {
+  //   console.log("Unable to retrieve your location");
+  // }
 
   const handleAcceptRide = async (requestId) => {
     try {
@@ -169,10 +198,10 @@ export default function DriverDash() {
   if (!isLoaded) {
     return <SkeletonText />;
   }
-  const addMarker = (coords) => {
-    setId((id)=>id+1);
-    setMarkers((markers) => markers.concat([{coords, id}]) )
-  }
+  // const addMarker = (coords) => {
+  //   setId((id)=>id+1);
+  //   setMarkers((markers) => markers.concat([{coords, id}]) )
+  // }
   return (
     <Flex position="relative" flexDirection="row" h="100vh" w="100vw">
       <Box
@@ -250,19 +279,14 @@ export default function DriverDash() {
           // onClick={(e)=> drawMarker ? addMarker(e.latLng.toJSON()) : null}
         >
         
-          {markers ? (
-                markers.map((marker) => {
-                  console.log(marker.coords)
-                  return (
-                    <Marker
-                      key={marker.id}
-                      draggable={drawMarker}
-                      position={marker.coords}
-                      onDragEnd={e => marker.coords = e.latLng.toJSON()}
-                    />
-                  )
-                })
-              ) : null }
+        {location && (
+            <Marker
+              position={{ lat: location.latitude, lng: location.longitude }}
+              icon={{
+                url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+              }}
+            />
+          )}
           {directionsResponse && (
             <DirectionsRenderer directions={directionsResponse} />
           )}
