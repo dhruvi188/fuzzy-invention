@@ -14,9 +14,10 @@ import DriverDash from './component/Driver-dashboard/DriverDash';
 import { signOut } from "firebase/auth";
 
 function App() {
+  const [loading, setLoading] = useState(true); 
   const [user, setUser] = useState(null); 
   const [userType, setUserType] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  
   const [userInfo, setUserInfo] = useState({ firstName: "", lastName: "" });
 
   const handleLogout = async () => {
@@ -30,16 +31,6 @@ function App() {
       console.error("Error logging out: ", error);
     }
   };
-
-  const ProtectedRoute = ({ children, redirectTo, condition }) => {
-   
-    if (loading) {
-      return <div>Loading...</div>; 
-    }
-    return condition ? children : <Navigate to={redirectTo} />;
-  };
-
-  
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (authUser) => {
       if (authUser) {
@@ -72,6 +63,16 @@ function App() {
 
     return () => unsubscribe();
   }, []);
+  const ProtectedRoute = ({ children, redirectTo, condition }) => {
+   
+    if (loading) {
+      return <div>Loading...</div>; 
+    }
+    return condition ? children : <Navigate to={redirectTo} />;
+  };
+
+  
+  
 
   if (loading) {
     return <div>Loading...</div>;
@@ -80,16 +81,16 @@ function App() {
   return (
     <Router>
       <div className="App">
+              
+              {user &&
+                <div className="top-right-menu">
+                  <span className="user-name">{`${userInfo.firstName} ${userInfo.lastName}`}</span>
+                  <button className="logout-button" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </div>}
         <div className="auth-wrapper">
           <div className="auth-inner">
-          {user && (
-              <div className="top-right-menu">
-                <span className="user-name">{`${userInfo.firstName} ${userInfo.lastName}`}</span>
-                <button className="logout-button" onClick={handleLogout}>
-                  Logout
-                </button>
-              </div>
-            )}
             <Routes>
               
               <Route
@@ -149,3 +150,6 @@ function App() {
 }
 
 export default App;
+
+
+

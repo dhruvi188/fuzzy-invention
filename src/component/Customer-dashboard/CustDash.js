@@ -35,7 +35,6 @@ import {
     // const [activeInput, setActiveInput] = useState(null);
     // const [isDashboardVisible, setIsDashboardVisible] = useState(true);
     const [selectedVehicle, setSelectedVehicle] = useState("");
-    const navigate = useNavigate();
     const { isLoaded } = useJsApiLoader({
         googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
         libraries: ["places"],
@@ -43,7 +42,7 @@ import {
     
       const [map, setMap] = useState(/** @type google.maps.Map */ (null))
       const [directionsResponse, setDirectionsResponse] = useState(null)
-      const [distance, setDistance] = useState(0)
+      const [distance, setDistance] = useState('')
       const [duration, setDuration] = useState('')
       const destinationRef = useRef(null);
       const sourceRef = useRef(null);
@@ -57,10 +56,7 @@ import {
         return <SkeletonText />
       }
 
-      const handleLogout = () => {
-        auth.signOut();
-        navigate("/login");
-      };
+    
 
     //   const handleInputChangeS = async (e, type) => {
     //     const value = e.target.value;
@@ -99,7 +95,6 @@ import {
       };
 
       const handlePlaceChangedS = () => {
-        console.log("hi", originRef.current.value);
         //setSource(originRef.current.value);
         setSource(prevSource => (originRef.current.value));
         // if (sourceRef.current)
@@ -116,6 +111,7 @@ import {
       
 
       const handleRequestRide = () => {
+
         // console.log(source, destination);
         const rideRequestsRef = ref(database, 'ride_requests');
         const newRideRequestRef = push(rideRequestsRef);
@@ -139,22 +135,37 @@ import {
           return
         }
         // eslint-disable-next-line no-undef
-        const directionsService = new google.maps.DirectionsService()
+        const directionsService = new google.maps.DirectionsService();
+        
         const results = await directionsService.route({
           origin: originRef.current.value,
           destination: destiantionRef.current.value,
           // eslint-disable-next-line no-undef
           travelMode: google.maps.TravelMode.DRIVING,
-        })
-        console.log(results);
-
+          transitOptions: {
+            departureTime: new Date(Date.now() + 1000),
+          }
+          })
         setDirectionsResponse(prevres => results)
         setDistance(results.routes[0].legs[0].distance.text)
         setDuration(results.routes[0].legs[0].duration.text) 
         // console.log(typeof(distance), distance);
         // console.log("hi", results.routes[0].legs[0].start_location.value);
       }
-    
+      function getMultiplier(vehicleName) {
+        if(vehicleName==="Car")
+        {
+          return 1.0;
+        }
+        else if(vehicleName==="Bike")
+        {
+          return 0.8;
+        }
+        else if(vehicleName==="Truck")
+        {
+          return 1.2;
+        }
+      }
       function clearRoute() {
         setDirectionsResponse(prevroute => null)
         setDistance('')
@@ -164,6 +175,7 @@ import {
       }
     
       return (
+
         <Flex
           position='relative'
           flexDirection='column'
@@ -171,6 +183,7 @@ import {
           h='100vh'
           w='100vw'
         >
+
           <Box position='absolute' left={0} top={0} h='100%' w='100%'>
             {/* Google Map Box */}
             <GoogleMap
@@ -237,7 +250,7 @@ import {
             onChange={(e) => setSelectedVehicle(prev => e.target.value)}
           >
             <option value="Car">Car</option>
-            <option value="2 Wheeler">2 Wheeler</option>
+            <option value="Bike">Bike</option>
             <option value="Truck">Truck</option>
           </Select>
         </HStack>
@@ -256,7 +269,7 @@ import {
             <HStack spacing={20} mt={4}>
               <Text>Distance: {distance} </Text>
               <Text>Duration: {duration} </Text>
-              {distance && <Text>Cost: {parseFloat(distance)*13 + 30}</Text>}
+              <Text>Cost: {(parseFloat(duration)*13 + 30)*parseFloat(getMultiplier(selectedVehicle))}</Text>
               <Button onClick={handleRequestRide}>
                   Request Ride
                 </Button>
@@ -274,3 +287,5 @@ import {
         </Flex>
       )
   }
+
+

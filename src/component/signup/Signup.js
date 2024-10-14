@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig/FirebaseConfig";
@@ -42,9 +42,8 @@ function Register() {
         });
 
         // Redirect to login page after sign-up
-        setTimeout(() => {
-          navigate("/login"); // Redirect user to login after successful sign-up
-        }, 2000); // Add a slight delay before redirecting to login
+        
+        navigate("/"+usertype+"-dashboard"); 
       }
     } catch (error) {
       console.log(error.message);
@@ -53,7 +52,12 @@ function Register() {
       });
     }
   };
-
+  useEffect(() => {
+    if(auth.currentUser)
+    {
+      navigate('/'+auth.currentUser.userType+'/-dashboard');
+    }
+  }, []);
   return (
     <form onSubmit={handleSubmit}>
       <h3>Sign Up</h3>
@@ -122,7 +126,7 @@ function Register() {
         </select>
       </div>
 
-      {usertype == "Driver" &&
+      {usertype === "Driver" &&
       <div className="mb-3">
         <label>Vehicle Type</label>
         <select className="form-control" onChange={(e) => setVehicle(e.target.value)}>
@@ -147,3 +151,5 @@ function Register() {
 }
 
 export default Register;
+
+

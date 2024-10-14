@@ -1,13 +1,13 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebaseConfig/FirebaseConfig";
 import { toast } from "react-toastify";
 import { doc, getDoc } from "firebase/firestore"; 
-
+import { useNavigate } from "react-router-dom";
 function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -25,9 +25,9 @@ function Login() {
 
         
         if (userType === "Customer") {
-          window.location.href = "/cust-dash";
+          window.location.href = "/customer-dashboard";
         } else if (userType === "Driver") {
-          window.location.href = "/driver-dash";
+          window.location.href = "/driver-dashboard";
         }
 
         
@@ -49,7 +49,12 @@ function Login() {
       });
     }
   };
-
+  useEffect(() => {
+    if(auth.currentUser)
+    {
+      navigate('/'+auth.currentUser.userType+'/-dashboard');
+    }
+  }, []);
   return (
     <form onSubmit={handleSubmit}>
       <h3>Login</h3>
@@ -89,3 +94,6 @@ function Login() {
 }
 
 export default Login;
+
+
+
