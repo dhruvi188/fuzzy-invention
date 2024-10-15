@@ -4,6 +4,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig/FirebaseConfig";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import '../../Auth.css'; // Custom CSS for styling
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -14,17 +15,38 @@ function Register() {
   const [usertype, setUser] = useState("");
   const [vehicle, setVehicle] = useState("");
 
-  const navigate = useNavigate(); // Use navigate for redirection
+  const [phoneError, setPhoneError] = useState(""); // State for mobile validation error
+
+  const navigate = useNavigate();
+
+  const phoneRegex = /^[7-9][0-9]{9}$/; // Regex for validating Indian mobile numbers
+
+  // Function to validate mobile number
+  const validatePhone = (value) => {
+    if (!value) {
+      setPhoneError("Phone number is required.");
+    } else if (!phoneRegex.test(value)) {
+      setPhoneError("Invalid phone number. Must be 10 digits and start with 7, 8, or 9.");
+    } else {
+      setPhoneError(""); // Clear error if valid
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Check if phone number is valid
+    validatePhone(phone);
+
+    // If there's any error, don't submit the form
+    if (phoneError) {
+      return;
+    }
+
     try {
-      // Create the user with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // If user is created, save additional data to Firestore
       if (user) {
         await setDoc(doc(db, "Users", user.uid), {
           email: user.email,
@@ -36,120 +58,119 @@ function Register() {
           photo: ""
         });
 
-        // Success message
-        toast.success("User registered successfully! Redirecting to login...", {
-          position: "top-center",
-        });
-
-        // Redirect to login page after sign-up
-        
-        navigate("/"+usertype+"-dashboard"); 
+        toast.success("User registered successfully! Redirecting...", { position: "top-center" });
+        navigate("/" + usertype + "-dashboard");
       }
     } catch (error) {
-      console.log(error.message);
-      toast.error(error.message, {
-        position: "bottom-center",
-      });
+      toast.error(error.message, { position: "bottom-center" });
     }
   };
+
   useEffect(() => {
-    if(auth.currentUser)
-    {
-      navigate('/'+auth.currentUser.userType+'/-dashboard');
+    if (auth.currentUser) {
+      navigate('/' + auth.currentUser.userType + '/dashboard');
     }
-  }, []);
+  }, [navigate]);
+
   return (
-    <form onSubmit={handleSubmit}>
-      <h3>Sign Up</h3>
+    <div className="auth-container">
+      <form onSubmit={handleSubmit} className="auth-form">
+        <h2 className="auth-heading">Sign Up</h2>
 
-      <div className="mb-3">
-        <label>First name</label>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="First name"
-          value={fname}
-          onChange={(e) => setFname(e.target.value)}
-        />
-      </div>
+        <div className="auth-input-group">
+          <label>First Name</label>
+          <input
+            type="text"
+            className="auth-input"
+            placeholder="First name"
+            value={fname}
+            required={true}
+            onChange={(e) => setFname(e.target.value)}
+          />
+        </div>
 
-      <div className="mb-3">
-        <label>Last name</label>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Last name"
-          value={lname}
-          onChange={(e) => setLname(e.target.value)}
-        />
-      </div>
+        <div className="auth-input-group">
+          <label>Last Name</label>
+          <input
+            type="text"
+            className="auth-input"
+            placeholder="Last name"
+            value={lname}
+            onChange={(e) => setLname(e.target.value)}
+          />
+        </div>
 
-      <div className="mb-3">
-        <label>Email address</label>
-        <input
-          type="email"
-          className="form-control"
-          placeholder="Enter email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
+        <div className="auth-input-group">
+          <label>Email address</label>
+          <input
+            type="email"
+            className="auth-input"
+            placeholder="Enter email"
+            value={email}
+            required={true}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-      <div className="mb-3">
-        <label>Password</label>
-        <input
-          type="password"
-          className="form-control"
-          placeholder="Enter password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
+        <div className="auth-input-group">
+          <label>Password</label>
+          <input
+            type="password"
+            className="auth-input"
+            placeholder="Enter password"
+            value={password}
+            required={true}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
-      <div className="mb-3">
-        <label>Phone Number</label>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Enter phone number"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-      </div>
+        <div className="auth-input-group">
+          <label>Phone Number</label>
+          <input
+            type="text"
+            className="auth-input"
+            placeholder="Enter phone number"
+            value={phone}
+            required={true}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              validatePhone(e.target.value); // Real-time validation on user input
+            }}
+          />
+          {phoneError && <p className="auth-error">{phoneError}</p>}
+        </div>
 
-      <div className="mb-3">
-        <label>Sign Up as</label>
-        <select className="form-control" onChange={(e) => setUser(e.target.value)}>
-        <option value="">Select an option</option>
-        <option value="Driver">Driver</option>
-        <option value="Customer">Customer</option>
-        </select>
-      </div>
+        <div className="auth-input-group">
+          <label>Sign Up as</label>
+          <select className="auth-input" value={usertype} onChange={(e) => setUser(e.target.value)} required={true}>
+            <option value="">Select an option</option>
+            <option value="Driver">Driver</option>
+            <option value="Customer">Customer</option>
+          </select>
+        </div>
 
-      {usertype === "Driver" &&
-      <div className="mb-3">
-        <label>Vehicle Type</label>
-        <select className="form-control" onChange={(e) => setVehicle(e.target.value)}>
-        <option value="">Select an option</option>
-        <option value="Car">Car</option>
-        <option value="Truck">Truck</option>
-        <option value="2 Wheeler">2 Wheeler</option>
-        </select>
-      </div>
-      }
+        {usertype === "Driver" && (
+          <div className="auth-input-group">
+            <label>Vehicle Type</label>
+            <select className="auth-input" value={vehicle} onChange={(e) => setVehicle(e.target.value)} required={true}>
+              <option value="">Select an option</option>
+              <option value="Car">Car</option>
+              <option value="Truck">Truck</option>
+              <option value="Bike">Bike</option>
+            </select>
+          </div>
+        )}
 
-      <div className="d-grid">
-        <button type="submit" className="btn btn-primary">
-          Sign Up
-        </button>
-      </div>
-      <p className="forgot-password text-right">
-        Already registered <a href="/login">sign in?</a>
-      </p>
-    </form>
+        <div className="auth-btn-group">
+          <button type="submit" className="auth-btn">Sign Up</button>
+        </div>
+
+        <p className="auth-link">
+          Already registered? <a href="/login">Sign in</a>
+        </p>
+      </form>
+    </div>
   );
 }
 
 export default Register;
-
-

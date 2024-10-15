@@ -15,7 +15,7 @@ const center = { lat: 28.5162618, lng: 77.1216273 };
 export default function DriverDash() {
   const [rideRequests, setRideRequests] = useState([]);
   const [selectedRide, setSelectedRide] = useState(null);
-  const [directionsResponse, setDirectionsResponse] = useState(null);
+  const [directionsResponse, setDirectionsResponse] = useState();
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
   const [driverVehicleType, setDriverVehicleType] = useState(null);
@@ -150,20 +150,37 @@ export default function DriverDash() {
       return;
     }
 
-    const directionsService = new window.google.maps.DirectionsService();
-    const results = await directionsService.route({
-      origin: source,
-      destination: destination,
-      travelMode: window.google.maps.TravelMode.DRIVING,
-    });
 
-    setDirectionsResponse(results);
-    setDistance(results.routes[0].legs[0].distance.text);
-    setDuration(results.routes[0].legs[0].duration.text);
+    try {
+      const directionsService = new window.google.maps.DirectionsService();
+      const results = await directionsService.route({
+        origin: source,
+        destination: destination,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+      });
+      // <DirectionsRenderer directions={null} />
+      // directionsDisplay.set('directions', null);
+      // Update with new route after resetting
+      setDirectionsResponse(prevVal => results);
+    } catch (error) {
+      console.error("Error calculating route:", error);
+    }
   };
+
+  // React to the new directionsResponse and extract the distance and duration
+  useEffect(() => {
+    if (directionsResponse) {
+      const leg = directionsResponse.routes[0].legs[0];
+      setDistance(leg.distance.text);
+      setDuration(leg.duration.text);
+    }
+  }, [directionsResponse]);
 
   const handleRideClick = (request) => {
     setSelectedRide(request);
+    
+    setDirectionsResponse(prevres => null);
+    
     calculateRoute(request.source, request.destination);
   };
 
@@ -209,15 +226,34 @@ export default function DriverDash() {
       </Box>
 
       <Box position="relative" h="100%" w="75%">
-        <GoogleMap center={center} zoom={15} mapContainerStyle={{ width: "100%", height: "100%" }} options={{ zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: false }} onLoad={(map) => (mapRef.current = map)}>
+        <GoogleMap
+          center={center}
+          zoom={15}
+          mapContainerStyle={{ width: "100%", height: "100%" }}
+          options={{
+            zoomControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+          }}
+          onLoad={(map) => (mapRef.current = map)}
+        >
+          {/* Show current location marker */}
           {location && (
-            <Marker position={{ lat: location.latitude, lng: location.longitude }} icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }} />
+            <Marker
+              position={{ lat: location.latitude, lng: location.longitude }}
+              icon={{ url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" }}
+            />
           )}
-          {directionsResponse && (
+
+          {/* {!directionsResponse && (<DirectionsRenderer directions={null} />)} */}
+
+          {directionsResponse && (<DirectionsRenderer directions={null} />) && (
             <DirectionsRenderer directions={directionsResponse} />
           )}
         </GoogleMap>
       </Box>
+
     </Flex>
   );
 }

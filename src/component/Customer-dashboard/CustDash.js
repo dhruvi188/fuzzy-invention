@@ -63,7 +63,7 @@ export default function CustDash() {
         }
       });
     });
-  }, []); // Only run once
+  }, []);
 
   const handlePlaceChangedD = () => {
     setDestination(destiantionRef.current.value);

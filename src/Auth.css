@@ -1,0 +1,87 @@
+/* Add to your Auth.css file */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* overflow-x: hidden; Prevent horizontal scroll */
+  }
+  
+  .auth-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    /* max-width: 480px; /* Restrict the max width to make the form look better on larger screens */
+    /* min-height: 100vh; Ensure the container takes up the full height */ 
+    padding: 20px;
+    margin-top: 40px;
+    box-sizing: border-box;
+    overflow-y:scroll; /* Allow vertical scrolling if content overflows */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .auth-form {
+    width: 100%;
+  }
+  
+  .auth-heading {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+  
+  .auth-input-group {
+    margin-bottom: 20px;
+  }
+  
+  .auth-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+  }
+  
+  .auth-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  
+  .auth-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .auth-link {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .auth-link a {
+    color: #007bff;
+  }
+  
+  .auth-error {
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  .auth-container::-webkit-scrollbar {
+    display: none; /* Hide the scrollbar in WebKit browsers (Chrome, Safari, etc.) */
+  }
+  
+  /* For Firefox */
+  .auth-container {
+    scrollbar-width: none; /* Firefox */
+  }
