@@ -1,64 +1,75 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
 import { auth, database } from "../firebaseConfig/FirebaseConfig";
 import { ref, push, set, onValue } from "firebase/database";
-
 import {
   Box,
   Button,
-  ButtonGroup,
   Flex,
   HStack,
+  VStack,
   IconButton,
   Input,
-  SkeletonText,
   Text,
   Select,
-  FormLabel
-} from '@chakra-ui/react'
-import { FaTimes } from 'react-icons/fa'
-
+  FormControl,
+  FormLabel,
+  useToast,
+  Divider,
+  Heading,
+  SkeletonText,
+  
+} from "@chakra-ui/react";
+import { FaTimes } from "react-icons/fa";
 import {
   useJsApiLoader,
   GoogleMap,
   Marker,
   Autocomplete,
   DirectionsRenderer,
-} from '@react-google-maps/api'
+} from "@react-google-maps/api";
 
-import { useRef, useEffect } from 'react';
-
-const center = { lat: 28.5162618, lng: 77.1216273 }
+const center = { lat: 28.5162618, lng: 77.1216273 };
 
 export default function CustDash() {
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
-  const [driverLocation, setDriverLocation] = useState(null); // State to store driver's live location
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [driverName, setDriverName] = useState("");
+  const [driverContact, setDriverContact] = useState("");
+  const [status, setStatus] = useState("");
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: ["places"],
   });
-
   const [map, setMap] = useState(null);
   const [directionsResponse, setDirectionsResponse] = useState(null);
-  const [distance, setDistance] = useState('');
-  const [duration, setDuration] = useState('');
+  const [distance, setDistance] = useState("");
+  const [duration, setDuration] = useState("");
   const destinationRef = useRef(null);
   const sourceRef = useRef(null);
   const originRef = useRef();
   const destiantionRef = useRef();
+  const toast = useToast();
 
-  // Fetch driver's live location from Firebase
+  // Fetch driver's live location, details, and status from Firebase
   useEffect(() => {
-    const rideRequestsRef = ref(database, 'ride_requests');
+    const rideRequestsRef = ref(database, "ride_requests");
     onValue(rideRequestsRef, (snapshot) => {
       snapshot.forEach((childSnapshot) => {
         const request = childSnapshot.val();
-        // Check if this request belongs to the current customer
-        if (request.customerId === auth.currentUser.uid && request.status === "accepted") {
+        if (request.customerId === auth.currentUser.uid) {
           if (request.driverLocation) {
             setDriverLocation(request.driverLocation);
+          }
+          if (request.driverName) {
+            setDriverName(request.driverName);
+          }
+          if (request.driverContact) {
+            setDriverContact(request.driverContact);
+          }
+          if (request.status) {
+            setStatus(request.status);
           }
         }
       });
@@ -74,7 +85,7 @@ export default function CustDash() {
   };
 
   const handleRequestRide = () => {
-    const rideRequestsRef = ref(database, 'ride_requests');
+    const rideRequestsRef = ref(database, "ride_requests");
     const newRideRequestRef = push(rideRequestsRef);
     set(newRideRequestRef, {
       source: source,
@@ -83,15 +94,36 @@ export default function CustDash() {
       customerId: auth.currentUser.uid,
       vehicle: selectedVehicle,
       timestamp: Date.now(),
-    }).then(() => {
-      alert(`Ride requested from ${source} to ${destination}`);
-    }).catch((error) => {
-      console.error("Error saving ride request: ", error);
-    });
+    })
+      .then(() => {
+        toast({
+          title: "Ride requested.",
+          description: `Ride requested from ${source} to ${destination}.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      })
+      .catch((error) => {
+        toast({
+          title: "Error.",
+          description: `Error saving ride request: ${error.message}`,
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      });
   };
 
   async function calculateRoute() {
-    if (originRef.current.value === '' || destiantionRef.current.value === '') {
+    if (originRef.current.value === "" || destiantionRef.current.value === "") {
+      toast({
+        title: "Input missing.",
+        description: "Please enter both origin and destination.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
 
@@ -108,79 +140,149 @@ export default function CustDash() {
 
   function clearRoute() {
     setDirectionsResponse(null);
-    setDistance('');
-    setDuration('');
-    originRef.current.value = '';
-    destiantionRef.current.value = '';
+    setDistance("");
+    setDuration("");
+    originRef.current.value = "";
+    destiantionRef.current.value = "";
   }
+
   if (!isLoaded) {
     return <SkeletonText />;
   }
+
   return (
-    <Flex position='relative' flexDirection='column' alignItems='center' h='100vh' w='100vw'>
-      <Box position='absolute' left={0} top={0} h='100%' w='100%'>
-        {/* Google Map Box */}
+    <Flex
+      position="relative"
+      flexDirection="column"
+      alignItems="center"
+      h="100vh"
+      w="100vw"
+      bg="gray.50"
+    >
+      {/* Google Map Container */}
+      <Box position="absolute" left={0} top={0} h="100%" w="100%">
         <GoogleMap
           center={center}
           zoom={15}
-          mapContainerStyle={{ width: '100%', height: '100%' }}
+          mapContainerStyle={{ width: "100%", height: "100%" }}
           options={{
-            zoomControl: false,
+            zoomControl: true,
             streetViewControl: false,
             mapTypeControl: false,
             fullscreenControl: false,
           }}
-          onLoad={map => setMap(map)}
+          onLoad={(map) => setMap(map)}
         >
           <Marker position={center} />
           {directionsResponse && <DirectionsRenderer directions={directionsResponse} />}
-
-          {/* Display driver's live location if available */}
           {driverLocation && (
             <Marker
               position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}
-              icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }} // Blue dot for the driver
+              icon={{ url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" }}
             />
           )}
         </GoogleMap>
       </Box>
 
-      <Box p={4} borderRadius='lg' m={4} bgColor='white' shadow='base' minW='container.md' zIndex='1'>
-        <HStack spacing={2} justifyContent='space-between'>
-          <Box flexGrow={1}>
-            <Autocomplete onLoad={(autocomplete) => (sourceRef.current = autocomplete)} onPlaceChanged={handlePlaceChangedS}>
-              <Input type='text' placeholder='Origin' ref={originRef} />
-            </Autocomplete>
-          </Box>
-          <Box flexGrow={1}>
-            <Autocomplete onLoad={(autocomplete) => (destinationRef.current = autocomplete)} onPlaceChanged={handlePlaceChangedD}>
-              <Input type='text' placeholder='Destination' ref={destiantionRef} />
-            </Autocomplete>
-          </Box>
+      {/* Ride Request Form */}
+      <Box
+        p={8}
+        borderRadius="lg"
+        m={4}
+        bgColor="white"
+        shadow="lg"
+        maxW="md"
+        zIndex="1"
+      >
+        <VStack spacing={6}>
+          <Heading size="lg" color="pink.600" textAlign="center">
+            Request a Ride
+          </Heading>
+          <Divider />
 
-          <HStack spacing={2} mt={4}>
-            <FormLabel htmlFor="vehicle">Select Vehicle</FormLabel>
-            <Select id="vehicle" placeholder="Choose vehicle" value={selectedVehicle} onChange={(e) => setSelectedVehicle(e.target.value)}>
+          <HStack spacing={4} w="100%">
+            <FormControl>
+              <FormLabel>Origin</FormLabel>
+              <Autocomplete
+                onLoad={(autocomplete) => (sourceRef.current = autocomplete)}
+                onPlaceChanged={handlePlaceChangedS}
+              >
+                <Input placeholder="Enter origin" ref={originRef} />
+              </Autocomplete>
+            </FormControl>
+            <FormControl>
+              <FormLabel>Destination</FormLabel>
+              <Autocomplete
+                onLoad={(autocomplete) => (destinationRef.current = autocomplete)}
+                onPlaceChanged={handlePlaceChangedD}
+              >
+                <Input placeholder="Enter destination" ref={destiantionRef} />
+              </Autocomplete>
+            </FormControl>
+          </HStack>
+
+          <FormControl>
+            <FormLabel>Select Vehicle</FormLabel>
+            <Select
+              placeholder="Choose vehicle"
+              value={selectedVehicle}
+              onChange={(e) => setSelectedVehicle(e.target.value)}
+            >
               <option value="Car">Car</option>
               <option value="Bike">Bike</option>
               <option value="Truck">Truck</option>
             </Select>
-          </HStack>
+          </FormControl>
 
-          <ButtonGroup>
-            <Button colorScheme='pink' type='submit' onClick={calculateRoute}>
+          <Divider />
+
+          <HStack justify="space-between" w="100%" mt={4}>
+            <Button colorScheme="blue" onClick={calculateRoute}>
               Calculate Route
             </Button>
-            <IconButton aria-label='center back' icon={<FaTimes />} onClick={clearRoute} />
-          </ButtonGroup>
-        </HStack>
+            <IconButton aria-label="clear route" icon={<FaTimes />} onClick={clearRoute} />
+          </HStack>
 
-        <HStack spacing={20} mt={4}>
-          <Text>Distance: {distance} </Text>
-          <Text>Duration: {duration} </Text>
-          <Text>Cost: {(parseFloat(duration) * 13 + 30) * parseFloat(selectedVehicle === 'Car' ? 1.0 : selectedVehicle === 'Bike' ? 0.8 : 1.2)}</Text>
-          <Button onClick={handleRequestRide}>Request Ride</Button>
-        </HStack>
+          <HStack w="100%" justify="space-between">
+            <Text fontSize="md">Distance: {distance}</Text>
+            <Text fontSize="md">Duration: {duration}</Text>
+            <Text fontSize="md">
+              Cost:{" "}
+              {(parseFloat(duration) * 13 + 30) *
+                parseFloat(
+                  selectedVehicle === "Car"
+                    ? 1.0
+                    : selectedVehicle === "Bike"
+                    ? 0.8
+                    : 1.2
+                )}
+            </Text>
+          </HStack>
+
+          <Button
+            colorScheme="pink"
+            size="lg"
+            w="full"
+            mt={4}
+            onClick={handleRequestRide}
+          >
+            Request Ride
+          </Button>
+
+          {/* Driver Details */}
+          {driverName && (
+            <card w="100%" bg="gray.100" mt={6}>
+                <Heading size="md" color="pink.600">
+                  Driver Details
+                </Heading>
+                <VStack align="start">
+                  <Text fontSize="md">Driver Name: {driverName}</Text>
+                  <Text fontSize="md">Driver Contact: {driverContact}</Text>
+                  <Text fontSize="md">Status: {status}</Text>
+                </VStack>
+            </card>
+          )}
+        </VStack>
       </Box>
     </Flex>
   );

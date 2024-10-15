@@ -106,11 +106,21 @@ export default function DriverDash() {
   const handleAcceptRide = async (requestId) => {
     try {
       const rideRequestRef = ref(database, `ride_requests/${requestId}`);
+      const userDocRef = doc(db, "Users", auth.currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      let driverName = "No Driver";
+      let contactNo = "Not Provided";
+      if (userDoc.exists()) {
+        driverName = userDoc.data().firstName + userDoc.data().lastName;
+        contactNo = userDoc.data().phone;
+      }
+      console.log(driverName);
+      console.log(contactNo);
       await update(rideRequestRef, {
         status: "accepted",
         driverId: auth.currentUser.uid,
-        driverContact: auth.currentUser.phoneNumber || "Not provided",
-        driverName: auth.currentUser.displayName || "Driver",
+        driverContact: contactNo || "Not provided",
+        driverName: driverName || "No Driver",
       });
       setSelectedRide({ id: requestId });  // Store the accepted ride
       alert("Ride accepted!");
