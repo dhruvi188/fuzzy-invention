@@ -19,12 +19,8 @@ export default function DriverDash() {
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
   const [driverVehicleType, setDriverVehicleType] = useState(null);
-  // const [ id, setId ] = useState(0);
-  // const [ markers, setMarkers ] = useState([]);
-  // const [ drawMarker, setDrawMarker ] = useState(false);
   const [location, setLocation] = useState(null);
   const locationIntervalRef = useRef(null);
-  // const [markerPosition, setMarkerPosition] = useState(null);
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: ["places"],
@@ -43,6 +39,7 @@ export default function DriverDash() {
       console.error("Error fetching driver vehicle type:", error);
     }
   };
+
   function updateLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -52,8 +49,12 @@ export default function DriverDash() {
             longitude: position.coords.longitude,
           };
           setLocation(newLocation);
-          console.log(`Updated location: Latitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}`);
-       
+
+          // Push driver's live location to Firebase for accepted rides
+          if (selectedRide) {
+            const driverLocationRef = ref(database, `ride_requests/${selectedRide.id}/driverLocation`);
+            set(driverLocationRef, newLocation);
+          }
         },
         (error) => {
           console.error("Error getting location:", error.message);
@@ -63,26 +64,22 @@ export default function DriverDash() {
       console.log("Geolocation not supported");
     }
   }
-  useEffect(() => {
-    // Initial location update
-    updateLocation();
 
-    // Set up interval to update location every 10 seconds
+  useEffect(() => {
+    updateLocation();
     locationIntervalRef.current = setInterval(updateLocation, 10000);
 
-    // Clean up function to clear the interval when the component unmounts
     return () => {
       if (locationIntervalRef.current) {
         clearInterval(locationIntervalRef.current);
       }
     };
-  }, []);
+  }, [selectedRide]);
+
   useEffect(() => {
     fetchDriverVehicleType();
   }, []);
 
-  
-  
   useEffect(() => {
     const rideRequestsRef = ref(database, "ride_requests");
     const unsubscribe = onValue(rideRequestsRef, (snapshot) => {
@@ -106,28 +103,6 @@ export default function DriverDash() {
     return () => unsubscribe();
   }, [driverVehicleType]);
 
-  // function handleLocationClick() {
-  //   if (navigator.geolocation) {
-  //     navigator.geolocation.getCurrentPosition(success, error);
-  //   } else {
-  //     console.log("Geolocation not supported");
-  //   }
-  // }
-
-  // function success(position) {
-  //   const latitude = position.coords.latitude;
-  //   const longitude = position.coords.longitude;
-  //   setLocation({ latitude, longitude });
-  //   console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
-
-  //   // Make API call to OpenWeatherMap
-
-  // }
-
-  // function error() {
-  //   console.log("Unable to retrieve your location");
-  // }
-
   const handleAcceptRide = async (requestId) => {
     try {
       const rideRequestRef = ref(database, `ride_requests/${requestId}`);
@@ -137,8 +112,8 @@ export default function DriverDash() {
         driverContact: auth.currentUser.phoneNumber || "Not provided",
         driverName: auth.currentUser.displayName || "Driver",
       });
+      setSelectedRide({ id: requestId });  // Store the accepted ride
       alert("Ride accepted!");
-      // Store watchId in state or ref to clear it when needed
     } catch (error) {
       console.error("Error accepting ride:", error);
     }
@@ -162,7 +137,6 @@ export default function DriverDash() {
       await update(rideRequestRef, {
         status: "delivered",
       });
-      // After marking as delivered, delete the ride request
       await remove(rideRequestRef);
       alert("Goods delivered, request deleted!");
       setRideRequests(rideRequests.filter((ride) => ride.id !== requestId));
@@ -177,7 +151,6 @@ export default function DriverDash() {
     }
 
     const directionsService = new window.google.maps.DirectionsService();
-
     const results = await directionsService.route({
       origin: source,
       destination: destination,
@@ -191,50 +164,23 @@ export default function DriverDash() {
 
   const handleRideClick = (request) => {
     setSelectedRide(request);
-    // handleLocationClick();
     calculateRoute(request.source, request.destination);
   };
 
   if (!isLoaded) {
     return <SkeletonText />;
   }
-  // const addMarker = (coords) => {
-  //   setId((id)=>id+1);
-  //   setMarkers((markers) => markers.concat([{coords, id}]) )
-  // }
+
   return (
     <Flex position="relative" flexDirection="row" h="100vh" w="100vw">
-      <Box
-        w="25%"
-        h="100%"
-        p={4}
-        bgColor="white"
-        shadow="base"
-        overflowY="auto"
-        zIndex="1"
-        borderRight="1px solid #ccc"
-      >
+      <Box w="25%" h="100%" p={4} bgColor="white" shadow="base" overflowY="auto" zIndex="1" borderRight="1px solid #ccc">
         <h2>Available Ride Requests</h2>
         <ul style={{ listStyleType: "none", padding: 0 }}>
           {rideRequests.length === 0 ? (
             <Text>No available ride requests for your vehicle type.</Text>
           ) : (
             rideRequests.map((request) => (
-              <li
-                key={request.id}
-                style={{
-                  marginBottom: "10px",
-                  padding: "10px",
-                  border: "1px solid #ddd",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  backgroundColor:
-                    selectedRide && selectedRide.id === request.id
-                      ? "#f0f8ff"
-                      : "white",
-                }}
-                onClick={() => handleRideClick(request)}
-              >
+              <li key={request.id} style={{ marginBottom: "10px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px", cursor: "pointer", backgroundColor: selectedRide && selectedRide.id === request.id ? "#f0f8ff" : "white" }} onClick={() => handleRideClick(request)}>
                 <p>
                   <strong>From:</strong> {request.source} <br />
                   <strong>To:</strong> {request.destination} <br />
@@ -246,18 +192,16 @@ export default function DriverDash() {
                     Accept Ride
                   </button>
                 )}
-                {request.status === "accepted" &&
-                  request.driverId === auth.currentUser.uid && (
-                    <button onClick={() => handleCollected(request.id)}>
-                      Goods Collected
-                    </button>
-                  )}
-                {request.status === "collected" &&
-                  request.driverId === auth.currentUser.uid && (
-                    <button onClick={() => handleDelivered(request.id)}>
-                      Goods Delivered
-                    </button>
-                  )}
+                {request.status === "accepted" && request.driverId === auth.currentUser.uid && (
+                  <button onClick={() => handleCollected(request.id)}>
+                    Goods Collected
+                  </button>
+                )}
+                {request.status === "collected" && request.driverId === auth.currentUser.uid && (
+                  <button onClick={() => handleDelivered(request.id)}>
+                    Goods Delivered
+                  </button>
+                )}
               </li>
             ))
           )}
@@ -265,41 +209,15 @@ export default function DriverDash() {
       </Box>
 
       <Box position="relative" h="100%" w="75%">
-        <GoogleMap
-          center={center}
-          zoom={15}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
-          options={{
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-          }}
-          onLoad={(map) => (mapRef.current = map)}
-          // onClick={(e)=> drawMarker ? addMarker(e.latLng.toJSON()) : null}
-        >
-        
-        {location && (
-            <Marker
-              position={{ lat: location.latitude, lng: location.longitude }}
-              icon={{
-                url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-              }}
-            />
+        <GoogleMap center={center} zoom={15} mapContainerStyle={{ width: "100%", height: "100%" }} options={{ zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: false }} onLoad={(map) => (mapRef.current = map)}>
+          {location && (
+            <Marker position={{ lat: location.latitude, lng: location.longitude }} icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }} />
           )}
           {directionsResponse && (
             <DirectionsRenderer directions={directionsResponse} />
           )}
-         
-             
         </GoogleMap>
-          
-
       </Box>
-      
     </Flex>
   );
 }
-
-
-
