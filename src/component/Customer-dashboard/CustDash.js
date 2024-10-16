@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { auth, database } from "../firebaseConfig/FirebaseConfig";
-import { ref, push, set, onValue } from "firebase/database";
+import { ref, push, set, onValue, remove } from "firebase/database";
+import { toast } from "react-toastify";
 import {
   Box,
   Button,
@@ -17,7 +18,6 @@ import {
   Divider,
   Heading,
   SkeletonText,
-  
 } from "@chakra-ui/react";
 import { FaTimes } from "react-icons/fa";
 import {
@@ -38,6 +38,7 @@ export default function CustDash() {
   const [driverName, setDriverName] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [status, setStatus] = useState("");
+  const [hasActiveBooking, setHasActiveBooking] = useState(false);
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: ["places"],
@@ -50,15 +51,16 @@ export default function CustDash() {
   const sourceRef = useRef(null);
   const originRef = useRef();
   const destiantionRef = useRef();
-  const toast = useToast();
 
   // Fetch driver's live location, details, and status from Firebase
   useEffect(() => {
     const rideRequestsRef = ref(database, "ride_requests");
     onValue(rideRequestsRef, (snapshot) => {
+      let activeBooking = false;
       snapshot.forEach((childSnapshot) => {
         const request = childSnapshot.val();
         if (request.customerId === auth.currentUser.uid) {
+          activeBooking = true;
           if (request.driverLocation) {
             setDriverLocation(request.driverLocation);
           }
@@ -71,10 +73,24 @@ export default function CustDash() {
           if (request.status) {
             setStatus(request.status);
           }
+          // if (!reqId) {
+          //   setStatus("Delivered");
+          // }
         }
       });
+      setHasActiveBooking(activeBooking);
+
+      // If no active booking found, reset state and allow new booking
+      if (!activeBooking) {
+        setDriverLocation(null);
+        setDriverName("");
+        setDriverContact("");
+        setStatus("");
+      }
     });
   }, []);
+
+  
 
   const handlePlaceChangedD = () => {
     setDestination(destiantionRef.current.value);
@@ -96,22 +112,13 @@ export default function CustDash() {
       timestamp: Date.now(),
     })
       .then(() => {
-        toast({
-          title: "Ride requested.",
-          description: `Ride requested from ${source} to ${destination}.`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
+        
+        toast.success(`Ride requested from ${source} to ${destination}.`, { position: "top-center" });
+        setHasActiveBooking(true);
       })
       .catch((error) => {
-        toast({
-          title: "Error.",
-          description: `Error saving ride request: ${error.message}`,
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+        toast.success(`Error saving ride request: ${error.message}`, { position: "top-center" });
+        
       });
   };
 
@@ -237,10 +244,10 @@ export default function CustDash() {
           <Divider />
 
           <HStack justify="space-between" w="100%" mt={4}>
-            <Button colorScheme="blue" onClick={calculateRoute}>
+            <Button colorScheme="blue" onClick={calculateRoute} isDisabled={hasActiveBooking}>
               Calculate Route
             </Button>
-            <IconButton aria-label="clear route" icon={<FaTimes />} onClick={clearRoute} />
+            <IconButton aria-label="clear route" icon={<FaTimes />} onClick={clearRoute} isDisabled={hasActiveBooking} />
           </HStack>
 
           <HStack w="100%" justify="space-between">
@@ -265,25 +272,28 @@ export default function CustDash() {
             w="full"
             mt={4}
             onClick={handleRequestRide}
+            isDisabled={hasActiveBooking}
           >
-            Request Ride
+            {hasActiveBooking ? "Ride in Progress" : "Request Ride"}
           </Button>
 
           {/* Driver Details */}
           {driverName && (
-            <card w="100%" bg="gray.100" mt={6}>
-                <Heading size="md" color="pink.600">
-                  Driver Details
-                </Heading>
-                <VStack align="start">
-                  <Text fontSize="md">Driver Name: {driverName}</Text>
-                  <Text fontSize="md">Driver Contact: {driverContact}</Text>
-                  <Text fontSize="md">Status: {status}</Text>
-                </VStack>
-            </card>
+            <Box w="100%" bg="gray.100" mt={6} p={4} borderRadius="lg">
+              <Heading size="md" color="pink.600">
+                Driver Details
+              </Heading>
+              <VStack align="start">
+                <Text fontSize="md">Driver Name: {driverName}</Text>
+                <Text fontSize="md">Driver Contact: {driverContact}</Text>
+                <Text fontSize="md">Status: {status}</Text>
+              </VStack>
+            </Box>
           )}
         </VStack>
       </Box>
     </Flex>
   );
 }
+
+
