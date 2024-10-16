@@ -52,8 +52,8 @@ export default function CustDash() {
   const originRef = useRef();
   const destiantionRef = useRef();
 
-  // Fetch driver's live location, details, and status from Firebase
   useEffect(() => {
+    
     const rideRequestsRef = ref(database, "ride_requests");
     onValue(rideRequestsRef, (snapshot) => {
       let activeBooking = false;
@@ -73,9 +73,6 @@ export default function CustDash() {
           if (request.status) {
             setStatus(request.status);
           }
-          // if (!reqId) {
-          //   setStatus("Delivered");
-          // }
         }
       });
       setHasActiveBooking(activeBooking);
@@ -89,8 +86,6 @@ export default function CustDash() {
       }
     });
   }, []);
-
-  
 
   const handlePlaceChangedD = () => {
     setDestination(destiantionRef.current.value);
@@ -112,13 +107,15 @@ export default function CustDash() {
       timestamp: Date.now(),
     })
       .then(() => {
-        
-        toast.success(`Ride requested from ${source} to ${destination}.`, { position: "top-center" });
+        toast.success(`Ride requested from ${source} to ${destination}.`, {
+          position: "top-center",
+        });
         setHasActiveBooking(true);
       })
       .catch((error) => {
-        toast.success(`Error saving ride request: ${error.message}`, { position: "top-center" });
-        
+        toast.success(`Error saving ride request: ${error.message}`, {
+          position: "top-center",
+        });
       });
   };
 
@@ -134,11 +131,11 @@ export default function CustDash() {
       return;
     }
 
-    const directionsService = new google.maps.DirectionsService();
+    const directionsService = new window.google.maps.DirectionsService();
     const results = await directionsService.route({
       origin: originRef.current.value,
       destination: destiantionRef.current.value,
-      travelMode: google.maps.TravelMode.DRIVING,
+      travelMode: window.google.maps.TravelMode.DRIVING,
     });
     setDirectionsResponse(results);
     setDistance(results.routes[0].legs[0].distance.text);
@@ -160,38 +157,12 @@ export default function CustDash() {
   return (
     <Flex
       position="relative"
-      flexDirection="column"
+      flexDirection="row"
       alignItems="center"
       h="100vh"
       w="100vw"
       bg="gray.50"
     >
-      {/* Google Map Container */}
-      <Box position="absolute" left={0} top={0} h="100%" w="100%">
-        <GoogleMap
-          center={center}
-          zoom={15}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
-          options={{
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-          }}
-          onLoad={(map) => setMap(map)}
-        >
-          <Marker position={center} />
-          {directionsResponse && <DirectionsRenderer directions={directionsResponse} />}
-          {driverLocation && (
-            <Marker
-              position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}
-              icon={{ url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" }}
-            />
-          )}
-        </GoogleMap>
-      </Box>
-
-      {/* Ride Request Form */}
       <Box
         p={8}
         borderRadius="lg"
@@ -200,6 +171,7 @@ export default function CustDash() {
         shadow="lg"
         maxW="md"
         zIndex="1"
+        w="20%"
       >
         <VStack spacing={6}>
           <Heading size="lg" color="pink.600" textAlign="center">
@@ -207,26 +179,26 @@ export default function CustDash() {
           </Heading>
           <Divider />
 
-          <HStack spacing={4} w="100%">
-            <FormControl>
-              <FormLabel>Origin</FormLabel>
-              <Autocomplete
-                onLoad={(autocomplete) => (sourceRef.current = autocomplete)}
-                onPlaceChanged={handlePlaceChangedS}
-              >
-                <Input placeholder="Enter origin" ref={originRef} />
-              </Autocomplete>
-            </FormControl>
-            <FormControl>
-              <FormLabel>Destination</FormLabel>
-              <Autocomplete
-                onLoad={(autocomplete) => (destinationRef.current = autocomplete)}
-                onPlaceChanged={handlePlaceChangedD}
-              >
-                <Input placeholder="Enter destination" ref={destiantionRef} />
-              </Autocomplete>
-            </FormControl>
-          </HStack>
+          {/* <HStack spacing={4} w="100%"> */}
+          <FormControl>
+            <FormLabel>Origin</FormLabel>
+            <Autocomplete
+              onLoad={(autocomplete) => (sourceRef.current = autocomplete)}
+              onPlaceChanged={handlePlaceChangedS}
+            >
+              <Input placeholder="Enter origin" ref={originRef} />
+            </Autocomplete>
+          </FormControl>
+          <FormControl>
+            <FormLabel>Destination</FormLabel>
+            <Autocomplete
+              onLoad={(autocomplete) => (destinationRef.current = autocomplete)}
+              onPlaceChanged={handlePlaceChangedD}
+            >
+              <Input placeholder="Enter destination" ref={destiantionRef} />
+            </Autocomplete>
+          </FormControl>
+          {/* </HStack> */}
 
           <FormControl>
             <FormLabel>Select Vehicle</FormLabel>
@@ -243,14 +215,23 @@ export default function CustDash() {
 
           <Divider />
 
-          <HStack justify="space-between" w="100%" mt={4}>
-            <Button colorScheme="blue" onClick={calculateRoute} isDisabled={hasActiveBooking}>
-              Calculate Route
-            </Button>
-            <IconButton aria-label="clear route" icon={<FaTimes />} onClick={clearRoute} isDisabled={hasActiveBooking} />
-          </HStack>
+          {/* <HStack justify="space-between" w="100%" mt={4}> */}
+          <Button
+            colorScheme="blue"
+            onClick={calculateRoute}
+            isDisabled={hasActiveBooking}
+          >
+            Calculate Route
+          </Button>
+          <IconButton
+            aria-label="clear route"
+            icon={<FaTimes />}
+            onClick={clearRoute}
+            isDisabled={hasActiveBooking}
+          />
+          {/* </HStack> */}
 
-          <HStack w="100%" justify="space-between">
+          {/* <HStack w="100%" justify="space-between"> */}
             <Text fontSize="md">Distance: {distance}</Text>
             <Text fontSize="md">Duration: {duration}</Text>
             <Text fontSize="md">
@@ -264,7 +245,7 @@ export default function CustDash() {
                     : 1.2
                 )}
             </Text>
-          </HStack>
+          {/* </HStack> */}
 
           <Button
             colorScheme="pink"
@@ -279,11 +260,11 @@ export default function CustDash() {
 
           {/* Driver Details */}
           {driverName && (
-            <Box w="100%" bg="gray.100" mt={6} p={4} borderRadius="lg">
+            <Box w="100%" bg="gray.100" borderRadius="lg">
               <Heading size="md" color="pink.600">
                 Driver Details
               </Heading>
-              <VStack align="start">
+              <VStack align="center">
                 <Text fontSize="md">Driver Name: {driverName}</Text>
                 <Text fontSize="md">Driver Contact: {driverContact}</Text>
                 <Text fontSize="md">Status: {status}</Text>
@@ -292,8 +273,39 @@ export default function CustDash() {
           )}
         </VStack>
       </Box>
+      {/* Google Map Container */}
+      <Box position="relative" left={0} top={0} h="100%" w="80%">
+        <GoogleMap
+          center={center}
+          zoom={15}
+          mapContainerStyle={{ width: "100%", height: "100%" }}
+          options={{
+            zoomControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+          }}
+          onLoad={(map) => setMap(map)}
+        >
+          <Marker position={center} />
+          {directionsResponse && (
+            <DirectionsRenderer directions={directionsResponse} />
+          )}
+          {driverLocation && (
+            <Marker
+              position={{
+                lat: driverLocation.latitude,
+                lng: driverLocation.longitude,
+              }}
+              icon={{
+                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+              }}
+            />
+          )}
+        </GoogleMap>
+      </Box>
+
+      {/* Ride Request Form */}
     </Flex>
   );
 }
-
-
