@@ -19,7 +19,7 @@ import {
   Heading,
   SkeletonText,
 } from "@chakra-ui/react";
-import { FaTimes } from "react-icons/fa";
+import { FaTimes, FaRoad } from "react-icons/fa";
 import {
   useJsApiLoader,
   GoogleMap,
@@ -47,13 +47,15 @@ export default function CustDash() {
   const [directionsResponse, setDirectionsResponse] = useState(null);
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
+  const [reqSource,setReqSource] =  useState("");
+  const [reqDestination, setReqDestination] = useState("");
+
   const destinationRef = useRef(null);
   const sourceRef = useRef(null);
   const originRef = useRef();
   const destiantionRef = useRef();
 
   useEffect(() => {
-    
     const rideRequestsRef = ref(database, "ride_requests");
     onValue(rideRequestsRef, (snapshot) => {
       let activeBooking = false;
@@ -72,6 +74,14 @@ export default function CustDash() {
           }
           if (request.status) {
             setStatus(request.status);
+          }
+          if(request.source)
+          {
+            setReqSource(request.source);
+          }
+          if(request.destination)
+          {
+            setReqDestination(request.destination);
           }
         }
       });
@@ -96,6 +106,7 @@ export default function CustDash() {
   };
 
   const handleRequestRide = () => {
+    alert("Confirm that you want to request the ride");
     const rideRequestsRef = ref(database, "ride_requests");
     const newRideRequestRef = push(rideRequestsRef);
     set(newRideRequestRef, {
@@ -141,7 +152,38 @@ export default function CustDash() {
     setDistance(results.routes[0].legs[0].distance.text);
     setDuration(results.routes[0].legs[0].duration.text);
   }
-
+  const handleCancelRide = () => {
+    alert("Confirm you want to cancel the ride?");
+    const rideRequestsRef = ref(database, "ride_requests");
+    
+    onValue(rideRequestsRef, (snapshot) => {
+      snapshot.forEach((childSnapshot) => {
+        const request = childSnapshot.val();
+        if (request.customerId === auth.currentUser.uid && request.status === "pending") {
+          // Remove the request from Firebase
+          remove(childSnapshot.ref)
+            .then(() => {
+              toast.success("Ride request canceled successfully.", { position: "top-center" });
+              // Reset the state
+              setSource("");
+              setDestination("");
+              setSelectedVehicle("");
+              setDriverLocation(null);
+              setDriverName("");
+              setDriverContact("");
+              setStatus("");
+              setHasActiveBooking(false);
+              setReqSource("")
+              setReqDestination("");
+            })
+            .catch((error) => {
+              toast.error(`Error canceling ride: ${error.message}`, { position: "top-center" });
+            });
+        }
+      });
+    });
+  };
+  
   function clearRoute() {
     setDirectionsResponse(null);
     setDistance("");
@@ -161,25 +203,24 @@ export default function CustDash() {
       alignItems="center"
       h="100vh"
       w="100vw"
-      bg="gray.50"
+      bg="gray.100" // Changed background color for a softer look
     >
       <Box
-        p={8}
+        p={10}
         borderRadius="lg"
         m={4}
         bgColor="white"
-        shadow="lg"
+        shadow="xl" // Increased shadow for better depth
         maxW="md"
         zIndex="1"
-        w="20%"
+        w="25%" // Adjusted width for better layout
       >
-        <VStack spacing={6}>
-          <Heading size="lg" color="pink.600" textAlign="center">
+        <VStack spacing={8}>
+          <Heading size="lg" color="teal.600" textAlign="center">
             Request a Ride
           </Heading>
-          <Divider />
+          <Divider borderColor="teal.300" />
 
-          {/* <HStack spacing={4} w="100%"> */}
           <FormControl>
             <FormLabel>Origin</FormLabel>
             <Autocomplete
@@ -189,6 +230,7 @@ export default function CustDash() {
               <Input placeholder="Enter origin" ref={originRef} />
             </Autocomplete>
           </FormControl>
+
           <FormControl>
             <FormLabel>Destination</FormLabel>
             <Autocomplete
@@ -198,7 +240,6 @@ export default function CustDash() {
               <Input placeholder="Enter destination" ref={destiantionRef} />
             </Autocomplete>
           </FormControl>
-          {/* </HStack> */}
 
           <FormControl>
             <FormLabel>Select Vehicle</FormLabel>
@@ -213,39 +254,43 @@ export default function CustDash() {
             </Select>
           </FormControl>
 
-          <Divider />
+          <Divider borderColor="teal.300" />
 
-          {/* <HStack justify="space-between" w="100%" mt={4}> */}
-          <Button
-            colorScheme="blue"
-            onClick={calculateRoute}
-            isDisabled={hasActiveBooking}
-          >
-            Calculate Route
-          </Button>
-          <IconButton
-            aria-label="clear route"
-            icon={<FaTimes />}
-            onClick={clearRoute}
-            isDisabled={hasActiveBooking}
-          />
-          {/* </HStack> */}
+          <HStack justify="space-between" w="100%" mt={4}>
+            <Button
+              colorScheme="teal"
+              onClick={calculateRoute}
+              isDisabled={hasActiveBooking}
+              leftIcon={<FaRoad />}
+            >
+              Calculate Route
+            </Button>
+            <IconButton
+              aria-label="clear route"
+              icon={<FaTimes />}
+              onClick={clearRoute}
+              isDisabled={hasActiveBooking}
+              colorScheme="red"
+            />
+          </HStack>
 
-          {/* <HStack w="100%" justify="space-between"> */}
+          <HStack w="100%" justify="space-between">
             <Text fontSize="md">Distance: {distance}</Text>
             <Text fontSize="md">Duration: {duration}</Text>
             <Text fontSize="md">
               Cost:{" "}
-              {(parseFloat(duration) * 13 + 30) *
+              {(
+                (parseFloat(duration) * 13 + 30) *
                 parseFloat(
                   selectedVehicle === "Car"
                     ? 1.0
                     : selectedVehicle === "Bike"
                     ? 0.8
                     : 1.2
-                )}
+                )
+              ).toFixed(2)}
             </Text>
-          {/* </HStack> */}
+          </HStack>
 
           <Button
             colorScheme="pink"
@@ -257,24 +302,47 @@ export default function CustDash() {
           >
             {hasActiveBooking ? "Ride in Progress" : "Request Ride"}
           </Button>
-
-          {/* Driver Details */}
-          {driverName && (
-            <Box w="100%" bg="gray.100" borderRadius="lg">
-              <Heading size="md" color="pink.600">
-                Driver Details
+          {/* {(status === "pending" || status === "accepted") && (
+              <Button
+                colorScheme="red"
+                size="lg"
+                w="full"
+                mt={4}
+                onClick={handleCancelRide}
+              >
+                Cancel Ride
+              </Button>
+            )} */}
+            <Button
+                colorScheme="red"
+                size="lg"
+                w="full"
+                mt={4}
+                onClick={handleCancelRide}
+                isDisabled={(status !== "pending" && status !== "accepted")}
+              >
+                Cancel Ride
+              </Button>
+              <Heading size="md" color="teal.600">
+                Requested Ride Information
               </Heading>
+          {driverName && (
+            <Box w="100%" bg="teal.50" borderRadius="lg" p={4}>
+              
               <VStack align="center">
                 <Text fontSize="md">Driver Name: {driverName}</Text>
                 <Text fontSize="md">Driver Contact: {driverContact}</Text>
-                <Text fontSize="md">Status: {status}</Text>
+                
               </VStack>
             </Box>
           )}
+          <Text fontSize="md">Source: {reqSource}</Text>
+          <Text fontSize="md">Destination: {reqDestination}</Text>
+          <Text fontSize="md">Status: {status}</Text>
         </VStack>
       </Box>
-      {/* Google Map Container */}
-      <Box position="relative" left={0} top={0} h="100%" w="80%">
+
+      <Box position="relative" left={0} top={0} h="100%" w="75%">
         <GoogleMap
           center={center}
           zoom={15}
@@ -304,8 +372,6 @@ export default function CustDash() {
           )}
         </GoogleMap>
       </Box>
-
-      {/* Ride Request Form */}
     </Flex>
   );
 }
