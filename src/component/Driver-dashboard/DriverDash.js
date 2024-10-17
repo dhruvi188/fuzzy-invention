@@ -1,5 +1,5 @@
 import { Box, Flex, SkeletonText, Text, Button } from "@chakra-ui/react";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, database, db } from "../firebaseConfig/FirebaseConfig";
 import { ref, onValue, update, remove, set, off } from "firebase/database";
 import { doc, getDoc } from "firebase/firestore";
@@ -9,6 +9,7 @@ import {
   Marker,
   DirectionsRenderer,
 } from "@react-google-maps/api";
+import myLocationImg from "../../mylocation.svg";
 
 const center = { lat: 28.5162618, lng: 77.1216273 };
 
@@ -27,7 +28,7 @@ export default function DriverDash() {
   });
 
   const mapRef = useRef();
-
+  const [map, setMap] = useState(/** @type google.maps.Map */);
   const fetchDriverVehicleType = async () => {
     try {
       const userDocRef = doc(db, "Users", auth.currentUser.uid);
@@ -40,11 +41,9 @@ export default function DriverDash() {
     }
   };
 
- 
-
   useEffect(() => {
     const rideRequestsRef = ref(database, "ride_requests");
-    
+
     const handleRideRequests = (snapshot) => {
       const newRideRequests = [];
       snapshot.forEach((childSnapshot) => {
@@ -60,12 +59,12 @@ export default function DriverDash() {
     };
 
     onValue(rideRequestsRef, handleRideRequests);
-  
+
     return () => {
-      off(rideRequestsRef, 'value', handleRideRequests);
+      off(rideRequestsRef, "value", handleRideRequests);
     };
   }, []);
-  
+
   const updateLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -77,6 +76,8 @@ export default function DriverDash() {
           setLocation(newLocation);
           console.log("hehehe");
           console.log(newLocation);
+          map.panTo({ lat: newLocation.latitude, lng: newLocation.longitude });
+          map.setZoom(15);
           console.log(rideRequests);
           rideRequests.forEach((request) => {
             const driverLocationRef = ref(
@@ -94,11 +95,11 @@ export default function DriverDash() {
       console.log("Geolocation not supported");
     }
   };
-  
+
   useEffect(() => {
     if (rideRequests.length > 0) {
-      updateLocation(); // Initial update
-      locationIntervalRef.current = setInterval(updateLocation, 10000);
+      updateLocation(); 
+      locationIntervalRef.current = setInterval(updateLocation, 20000);
     } else {
       if (locationIntervalRef.current) {
         clearInterval(locationIntervalRef.current);
@@ -111,7 +112,6 @@ export default function DriverDash() {
       }
     };
   }, [rideRequests]);
-  
 
   useEffect(() => {
     fetchDriverVehicleType();
@@ -170,11 +170,11 @@ export default function DriverDash() {
     try {
       const rideRequestRef = ref(database, `ride_requests/${requestId}`);
       await update(rideRequestRef, {
-        ...rideRequestRef.params, 
+        ...rideRequestRef.params,
         status: "pending",
         driverContact: null,
         driverId: null,
-        driverLocation: null, 
+        driverLocation: null,
         driverName: null,
       });
 
@@ -246,7 +246,27 @@ export default function DriverDash() {
 
     calculateRoute(request.source, request.destination);
   };
-
+  const handleMyLocation = () => {
+    if (location && map) {
+      map.panTo({ lat: location.latitude, lng: location.longitude });
+      map.setZoom(15);
+    }
+  };
+  const MyLocationButton = ({ onClick }) => {
+    return (
+      <button onClick={onClick}>
+        <img
+          src={myLocationImg}
+          alt="My Location"
+          style={{ verticalAlign: "middle", height: "36px", width: "36px" }}
+        />
+      </button>
+    );
+  };
+  const onLoad = useCallback((map) => {
+    mapRef.current = map;
+    setMap(map);
+  }, []);
   if (!isLoaded) {
     return <SkeletonText />;
   }
@@ -329,7 +349,7 @@ export default function DriverDash() {
             mapTypeControl: false,
             fullscreenControl: false,
           }}
-          onLoad={(map) => (mapRef.current = map)}
+          onLoad={onLoad}
         >
           {/* Show current location marker */}
           {location && (
@@ -341,12 +361,15 @@ export default function DriverDash() {
             />
           )}
 
-          {/* {!directionsResponse && (<DirectionsRenderer directions={null} />)} */}
-
-          {directionsResponse && <DirectionsRenderer directions={null} /> && (
+          {directionsResponse && (
             <DirectionsRenderer directions={directionsResponse} />
           )}
         </GoogleMap>
+
+        {/* MyLocationButton positioned on the map */}
+        <Box position="absolute" bottom="10px" left="10px" zIndex="1">
+          <MyLocationButton onClick={handleMyLocation} />
+        </Box>
       </Box>
     </Flex>
   );
