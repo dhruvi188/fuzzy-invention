@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, database } from "../firebaseConfig/FirebaseConfig";
 import { ref, push, set, onValue, remove } from "firebase/database";
+import myLocationImg from "../../mylocation.svg";
+//hiiiiiiiiiiiiiiiiiiiii commenting for undo stopping
 import { toast } from "react-toastify";
 import {
   Box,
@@ -20,6 +22,7 @@ import {
   SkeletonText,
 } from "@chakra-ui/react";
 import { FaTimes, FaRoad } from "react-icons/fa";
+import carIcon from "../../carIcon.svg";
 import {
   useJsApiLoader,
   GoogleMap,
@@ -43,58 +46,52 @@ export default function CustDash() {
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
     libraries: ["places"],
   });
-  const [map, setMap] = useState(null);
+  const mapRef = useRef();
+  const [map, setMap] = useState(/** @type google.maps.Map */);
   const [directionsResponse, setDirectionsResponse] = useState(null);
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
-  const [reqSource,setReqSource] =  useState("");
+  const [reqSource, setReqSource] = useState("");
   const [reqDestination, setReqDestination] = useState("");
-
+  const [activeRideId, setActiveRideId] = useState(null);
   const destinationRef = useRef(null);
   const sourceRef = useRef(null);
   const originRef = useRef();
   const destiantionRef = useRef();
 
+  
   useEffect(() => {
+    console.log("kejjjjjj");
     const rideRequestsRef = ref(database, "ride_requests");
-    onValue(rideRequestsRef, (snapshot) => {
+    const unsubscribe = onValue(rideRequestsRef, (snapshot) => {
       let activeBooking = false;
       snapshot.forEach((childSnapshot) => {
         const request = childSnapshot.val();
-        if (request.customerId === auth.currentUser.uid) {
+        if (request.customerId === auth.currentUser.uid &&  request.status !== "delivered") {
+
           activeBooking = true;
-          if (request.driverLocation) {
-            setDriverLocation(request.driverLocation);
-          }
-          if (request.driverName) {
-            setDriverName(request.driverName);
-          }
-          if (request.driverContact) {
-            setDriverContact(request.driverContact);
-          }
-          if (request.status) {
-            setStatus(request.status);
-          }
-          if(request.source)
-          {
-            setReqSource(request.source);
-          }
-          if(request.destination)
-          {
-            setReqDestination(request.destination);
-          }
+          setDriverLocation(request.driverLocation || null);
+          setDriverName(request.driverName || "");
+          setDriverContact(request.driverContact || "");
+          setStatus(request.status || "");
+          setReqSource(request.source || "");
+          setReqDestination(request.destination || "");
         }
       });
       setHasActiveBooking(activeBooking);
 
-      // If no active booking found, reset state and allow new booking
       if (!activeBooking) {
         setDriverLocation(null);
         setDriverName("");
         setDriverContact("");
         setStatus("");
+        setReqSource("");
+        setReqDestination("");
       }
     });
+
+    // Cleanup function to unsubscribe from the listener
+    return () => unsubscribe();
   }, []);
 
   const handlePlaceChangedD = () => {
@@ -106,28 +103,37 @@ export default function CustDash() {
   };
 
   const handleRequestRide = () => {
-    alert("Confirm that you want to request the ride");
-    const rideRequestsRef = ref(database, "ride_requests");
-    const newRideRequestRef = push(rideRequestsRef);
-    set(newRideRequestRef, {
-      source: source,
-      destination: destination,
-      status: "pending",
-      customerId: auth.currentUser.uid,
-      vehicle: selectedVehicle,
-      timestamp: Date.now(),
-    })
-      .then(() => {
-        toast.success(`Ride requested from ${source} to ${destination}.`, {
-          position: "top-center",
-        });
-        setHasActiveBooking(true);
-      })
-      .catch((error) => {
-        toast.success(`Error saving ride request: ${error.message}`, {
-          position: "top-center",
-        });
+    if (hasActiveBooking) {
+      toast.warning("You already have an active booking.", {
+        position: "top-center",
       });
+      return;
+    }
+
+    const confirmRequest = window.confirm("Confirm that you want to request the ride");
+    if (confirmRequest) {
+      const rideRequestsRef = ref(database, "ride_requests");
+      const newRideRequestRef = push(rideRequestsRef);
+      set(newRideRequestRef, {
+        source: source,
+        destination: destination,
+        status: "pending",
+        customerId: auth.currentUser.uid,
+        vehicle: selectedVehicle,
+        timestamp: Date.now(),
+      })
+        .then(() => {
+          toast.success(`Ride requested from ${source} to ${destination}.`, {
+            position: "top-center",
+          });
+          setHasActiveBooking(true);
+        })
+        .catch((error) => {
+          toast.error(`Error saving ride request: ${error.message}`, {
+            position: "top-center",
+          });
+        });
+    }
   };
 
   async function calculateRoute() {
@@ -153,37 +159,48 @@ export default function CustDash() {
     setDuration(results.routes[0].legs[0].duration.text);
   }
   const handleCancelRide = () => {
-    alert("Confirm you want to cancel the ride?");
-    const rideRequestsRef = ref(database, "ride_requests");
-    
-    onValue(rideRequestsRef, (snapshot) => {
-      snapshot.forEach((childSnapshot) => {
-        const request = childSnapshot.val();
-        if (request.customerId === auth.currentUser.uid && request.status === "pending") {
-          // Remove the request from Firebase
-          remove(childSnapshot.ref)
-            .then(() => {
-              toast.success("Ride request canceled successfully.", { position: "top-center" });
-              // Reset the state
-              setSource("");
-              setDestination("");
-              setSelectedVehicle("");
-              setDriverLocation(null);
-              setDriverName("");
-              setDriverContact("");
-              setStatus("");
-              setHasActiveBooking(false);
-              setReqSource("")
-              setReqDestination("");
-            })
-            .catch((error) => {
-              toast.error(`Error canceling ride: ${error.message}`, { position: "top-center" });
-            });
-        }
+    if (!hasActiveBooking) {
+      toast.warning("You don't have an active booking to cancel.", {
+        position: "top-center",
       });
-    });
+      return;
+    }
+
+    const confirmCancel = window.confirm("Confirm you want to cancel the ride?");
+    if (confirmCancel) {
+      const rideRequestsRef = ref(database, "ride_requests");
+      
+      onValue(rideRequestsRef, (snapshot) => {
+        snapshot.forEach((childSnapshot) => {
+          const request = childSnapshot.val();
+          if (request.customerId === auth.currentUser.uid) {
+            remove(childSnapshot.ref)
+              .then(() => {
+                toast.success("Ride request canceled successfully.", {
+                  position: "top-center",
+                });
+                setSource("");
+                setDestination("");
+                setSelectedVehicle("");
+                setDriverLocation(null);
+                setDriverName("");
+                setDriverContact("");
+                setStatus("");
+                setHasActiveBooking(false);
+                setReqSource("");
+                setReqDestination("");
+              })
+              .catch((error) => {
+                toast.error(`Error canceling ride: ${error.message}`, {
+                  position: "top-center",
+                });
+              });
+          }
+        });
+      }, { onlyOnce: true }); // This ensures the callback only runs once
+    }
   };
-  
+
   function clearRoute() {
     setDirectionsResponse(null);
     setDistance("");
@@ -191,7 +208,37 @@ export default function CustDash() {
     originRef.current.value = "";
     destiantionRef.current.value = "";
   }
+  const handleDriverLocation = () => {
+    if (driverLocation && map) {
+      map.panTo({
+        lat: driverLocation.latitude,
+        lng: driverLocation.longitude,
+      });
+      map.setZoom(15);
+    }
+  };
 
+  useEffect(() => {
+    console.log("kedarrtreads");
+    console.log(driverLocation);
+    handleDriverLocation();
+  },[driverLocation]);
+
+  const MyLocationButton = ({ onClick }) => {
+    return (
+      <button onClick={onClick}>
+        <img
+          src={carIcon}
+          alt="My Location"
+          style={{ verticalAlign: "middle", height: "36px", width: "36px" }}
+        />
+      </button>
+    );
+  };
+  const onLoad = useCallback((map) => {
+    mapRef.current = map;
+    setMap(map);
+  }, []);
   if (!isLoaded) {
     return <SkeletonText />;
   }
@@ -302,6 +349,16 @@ export default function CustDash() {
           >
             {hasActiveBooking ? "Ride in Progress" : "Request Ride"}
           </Button>
+          <Button
+            colorScheme="red"
+            size="lg"
+            w="full"
+            mt={4}
+            onClick={handleCancelRide}
+            isDisabled={!hasActiveBooking && status !== "pending" && status !== "accepted"}
+          >
+            Cancel Ride
+          </Button>
           {/* {(status === "pending" || status === "accepted") && (
               <Button
                 colorScheme="red"
@@ -313,26 +370,15 @@ export default function CustDash() {
                 Cancel Ride
               </Button>
             )} */}
-            <Button
-                colorScheme="red"
-                size="lg"
-                w="full"
-                mt={4}
-                onClick={handleCancelRide}
-                isDisabled={(status !== "pending" && status !== "accepted")}
-              >
-                Cancel Ride
-              </Button>
-              <Heading size="md" color="teal.600">
-                Requested Ride Information
-              </Heading>
+          
+          <Heading size="md" color="teal.600">
+            Requested Ride Information
+          </Heading>
           {driverName && (
             <Box w="100%" bg="teal.50" borderRadius="lg" p={4}>
-              
               <VStack align="center">
                 <Text fontSize="md">Driver Name: {driverName}</Text>
                 <Text fontSize="md">Driver Contact: {driverContact}</Text>
-                
               </VStack>
             </Box>
           )}
@@ -353,7 +399,7 @@ export default function CustDash() {
             mapTypeControl: false,
             fullscreenControl: false,
           }}
-          onLoad={(map) => setMap(map)}
+          onLoad={onLoad}
         >
           <Marker position={center} />
           {directionsResponse && (
@@ -371,6 +417,9 @@ export default function CustDash() {
             />
           )}
         </GoogleMap>
+        <Box position="absolute" bottom="10px" left="10px" zIndex="1">
+          <MyLocationButton onClick={handleDriverLocation} />
+        </Box>
       </Box>
     </Flex>
   );
