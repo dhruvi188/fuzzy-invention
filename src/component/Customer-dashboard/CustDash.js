@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, database } from "../firebaseConfig/FirebaseConfig";
 import { ref, push, set, onValue, remove } from "firebase/database";
 import myLocationImg from "../../mylocation.svg";
-//hiiiiiiiiiiiiiiiiiiiii commenting for undo stopping
 import { toast } from "react-toastify";
 import {
   Box,
@@ -59,7 +58,7 @@ export default function CustDash() {
   const originRef = useRef();
   const destiantionRef = useRef();
 
-  
+
   useEffect(() => {
     console.log("kejjjjjj");
     const rideRequestsRef = ref(database, "ride_requests");
@@ -67,7 +66,7 @@ export default function CustDash() {
       let activeBooking = false;
       snapshot.forEach((childSnapshot) => {
         const request = childSnapshot.val();
-        if (request.customerId === auth.currentUser.uid &&  request.status !== "delivered") {
+        if (request.customerId === auth.currentUser.uid && request.status !== "delivered") {
 
           activeBooking = true;
           setDriverLocation(request.driverLocation || null);
@@ -169,7 +168,7 @@ export default function CustDash() {
     const confirmCancel = window.confirm("Confirm you want to cancel the ride?");
     if (confirmCancel) {
       const rideRequestsRef = ref(database, "ride_requests");
-      
+
       onValue(rideRequestsRef, (snapshot) => {
         snapshot.forEach((childSnapshot) => {
           const request = childSnapshot.val();
@@ -222,7 +221,7 @@ export default function CustDash() {
     console.log("kedarrtreads");
     console.log(driverLocation);
     handleDriverLocation();
-  },[driverLocation]);
+  }, [driverLocation]);
 
   const MyLocationButton = ({ onClick }) => {
     return (
@@ -332,8 +331,8 @@ export default function CustDash() {
                   selectedVehicle === "Car"
                     ? 1.0
                     : selectedVehicle === "Bike"
-                    ? 0.8
-                    : 1.2
+                      ? 0.8
+                      : 1.2
                 )
               ).toFixed(2)}
             </Text>
@@ -355,7 +354,7 @@ export default function CustDash() {
             w="full"
             mt={4}
             onClick={handleCancelRide}
-            isDisabled={!hasActiveBooking && status !== "pending" && status !== "accepted"}
+            isDisabled={status !== "pending" && status !== "accepted"}
           >
             Cancel Ride
           </Button>
@@ -370,7 +369,7 @@ export default function CustDash() {
                 Cancel Ride
               </Button>
             )} */}
-          
+
           <Heading size="md" color="teal.600">
             Requested Ride Information
           </Heading>
