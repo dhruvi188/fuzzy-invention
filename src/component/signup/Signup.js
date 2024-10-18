@@ -4,7 +4,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig/FirebaseConfig";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import '../../Auth.css'; // Custom CSS for styling
+import '../../Style/Auth.css'; // Custom CSS for styling
 
 function Register() {
   const [email, setEmail] = useState("");

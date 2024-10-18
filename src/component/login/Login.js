@@ -4,7 +4,7 @@ import { auth, db } from "../firebaseConfig/FirebaseConfig";
 import { toast } from "react-toastify";
 import { doc, getDoc } from "firebase/firestore"; 
 import { useNavigate } from "react-router-dom";
-import '../../Auth.css'; // Custom CSS for styling
+import '../../Style/Auth.css'; 
 
 function Login() {
   const navigate = useNavigate();

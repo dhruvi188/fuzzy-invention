@@ -9,7 +9,7 @@ import {
   Marker,
   DirectionsRenderer,
 } from "@react-google-maps/api";
-import myLocationImg from "../../mylocation.svg";
+import myLocationImg from "../../Images/mylocation.svg";
 
 const center = { lat: 28.5162618, lng: 77.1216273 };
 

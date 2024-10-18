@@ -10,7 +10,7 @@ import MapConfig from './component/map/Map';
 import CustDash from './component/Customer-dashboard/CustDash';
 import DriverDash from './component/Driver-dashboard/DriverDash';
 import { signOut } from "firebase/auth";
-import "./App.css";
+import "./Style/App.css";
 
 function App() {
   const [loading, setLoading] = useState(true);

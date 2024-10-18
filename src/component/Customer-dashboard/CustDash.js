@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, database } from "../firebaseConfig/FirebaseConfig";
 import { ref, push, set, onValue, remove } from "firebase/database";
-import myLocationImg from "../../mylocation.svg";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -21,7 +20,7 @@ import {
   SkeletonText,
 } from "@chakra-ui/react";
 import { FaTimes, FaRoad } from "react-icons/fa";
-import carIcon from "../../carIcon.svg";
+import carIcon from "../../Images/carIcon.svg";
 import {
   useJsApiLoader,
   GoogleMap,
