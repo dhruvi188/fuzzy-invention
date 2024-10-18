@@ -1,4 +1,4 @@
-import { Box, Flex, SkeletonText, Text, Button } from "@chakra-ui/react";
+import { Box, Flex, SkeletonText, Text } from "@chakra-ui/react";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, database, db } from "../firebaseConfig/FirebaseConfig";
 import { ref, onValue, update, remove, set, off } from "firebase/database";
@@ -17,8 +17,6 @@ export default function DriverDash() {
   const [rideRequests, setRideRequests] = useState([]);
   const [selectedRide, setSelectedRide] = useState(null);
   const [directionsResponse, setDirectionsResponse] = useState();
-  const [distance, setDistance] = useState("");
-  const [duration, setDuration] = useState("");
   const [driverVehicleType, setDriverVehicleType] = useState(null);
   const [location, setLocation] = useState(null);
   const locationIntervalRef = useRef(null);
@@ -221,23 +219,13 @@ export default function DriverDash() {
         destination: destination,
         travelMode: window.google.maps.TravelMode.DRIVING,
       });
-      // <DirectionsRenderer directions={null} />
-      // directionsDisplay.set('directions', null);
-      // Update with new route after resetting
+      
       setDirectionsResponse((prevVal) => results);
     } catch (error) {
       console.error("Error calculating route:", error);
     }
   };
 
-  // React to the new directionsResponse and extract the distance and duration
-  useEffect(() => {
-    if (directionsResponse) {
-      const leg = directionsResponse.routes[0].legs[0];
-      setDistance(leg.distance.text);
-      setDuration(leg.duration.text);
-    }
-  }, [directionsResponse]);
 
   const handleRideClick = (request) => {
     setSelectedRide(request);

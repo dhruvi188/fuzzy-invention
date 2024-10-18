@@ -57,9 +57,7 @@ export default function CustDash() {
   const originRef = useRef();
   const destiantionRef = useRef();
 
-
   useEffect(() => {
-    console.log("kejjjjjj");
     const rideRequestsRef = ref(database, "ride_requests");
     const unsubscribe = onValue(rideRequestsRef, (snapshot) => {
       let activeBooking = false;
@@ -88,15 +86,19 @@ export default function CustDash() {
       }
     });
 
-    // Cleanup function to unsubscribe from the listener
     return () => unsubscribe();
   }, []);
 
-  const handlePlaceChangedD = () => {
+  useEffect(() => {
+    handleDriverLocation();
+  }, [driverLocation]);
+
+
+  const handleDestinationChange = () => {
     setDestination(destiantionRef.current.value);
   };
 
-  const handlePlaceChangedS = () => {
+  const handleSourceChange = () => {
     setSource(originRef.current.value);
   };
 
@@ -134,7 +136,8 @@ export default function CustDash() {
     }
   };
 
-  async function calculateRoute() {
+
+  const calculateRoute = async () => {
     if (originRef.current.value === "" || destiantionRef.current.value === "") {
       toast({
         title: "Input missing.",
@@ -199,7 +202,7 @@ export default function CustDash() {
     }
   };
 
-  function clearRoute() {
+  const clearRoute = () => {
     setDirectionsResponse(null);
     setDistance("");
     setDuration("");
@@ -216,11 +219,7 @@ export default function CustDash() {
     }
   };
 
-  useEffect(() => {
-    console.log("kedarrtreads");
-    console.log(driverLocation);
-    handleDriverLocation();
-  }, [driverLocation]);
+
 
   const MyLocationButton = ({ onClick }) => {
     return (
@@ -248,17 +247,17 @@ export default function CustDash() {
       alignItems="center"
       h="100vh"
       w="100vw"
-      bg="gray.100" // Changed background color for a softer look
+      bg="gray.100" 
     >
       <Box
         p={10}
         borderRadius="lg"
         m={4}
         bgColor="white"
-        shadow="xl" // Increased shadow for better depth
+        shadow="xl" 
         maxW="md"
         zIndex="1"
-        w="25%" // Adjusted width for better layout
+        w="25%"
       >
         <VStack spacing={8}>
           <Heading size="lg" color="teal.600" textAlign="center">
@@ -270,7 +269,7 @@ export default function CustDash() {
             <FormLabel>Origin</FormLabel>
             <Autocomplete
               onLoad={(autocomplete) => (sourceRef.current = autocomplete)}
-              onPlaceChanged={handlePlaceChangedS}
+              onPlaceChanged={handleSourceChange}
             >
               <Input placeholder="Enter origin" ref={originRef} />
             </Autocomplete>
@@ -280,7 +279,7 @@ export default function CustDash() {
             <FormLabel>Destination</FormLabel>
             <Autocomplete
               onLoad={(autocomplete) => (destinationRef.current = autocomplete)}
-              onPlaceChanged={handlePlaceChangedD}
+              onPlaceChanged={handleDestinationChange}
             >
               <Input placeholder="Enter destination" ref={destiantionRef} />
             </Autocomplete>
@@ -357,17 +356,6 @@ export default function CustDash() {
           >
             Cancel Ride
           </Button>
-          {/* {(status === "pending" || status === "accepted") && (
-              <Button
-                colorScheme="red"
-                size="lg"
-                w="full"
-                mt={4}
-                onClick={handleCancelRide}
-              >
-                Cancel Ride
-              </Button>
-            )} */}
 
           <Heading size="md" color="teal.600">
             Requested Ride Information

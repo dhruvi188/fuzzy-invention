@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import '../../Style/Auth.css'; // Custom CSS for styling
 
-function Register() {
+export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fname, setFname] = useState("");
@@ -21,7 +21,6 @@ function Register() {
 
   const phoneRegex = /^[7-9][0-9]{9}$/; // Regex for validating Indian mobile numbers
 
-  // Function to validate mobile number
   const validatePhone = (value) => {
     if (!value) {
       setPhoneError("Phone number is required.");
@@ -173,4 +172,3 @@ function Register() {
   );
 }
 
-export default Register;
