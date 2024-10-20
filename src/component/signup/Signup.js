@@ -4,8 +4,8 @@ import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig/FirebaseConfig";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import '../../Style/Auth.css'; // Custom CSS for styling
-
+import "../../Style/Auth.css"; // Custom CSS for styling
+import { vehicleTypes } from "../../constants";
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +25,9 @@ export default function Register() {
     if (!value) {
       setPhoneError("Phone number is required.");
     } else if (!phoneRegex.test(value)) {
-      setPhoneError("Invalid phone number. Must be 10 digits and start with 7, 8, or 9.");
+      setPhoneError(
+        "Invalid phone number. Must be 10 digits and start with 7, 8, or 9."
+      );
     } else {
       setPhoneError(""); // Clear error if valid
     }
@@ -43,7 +45,11 @@ export default function Register() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       if (user) {
@@ -54,10 +60,12 @@ export default function Register() {
           phone: phone,
           userType: usertype,
           vehicleType: vehicle,
-          photo: ""
+          photo: "",
         });
 
-        toast.success("User registered successfully! Redirecting...", { position: "top-center" });
+        toast.success("User registered successfully! Redirecting...", {
+          position: "top-center",
+        });
         navigate("/" + usertype + "-dashboard");
       }
     } catch (error) {
@@ -67,7 +75,7 @@ export default function Register() {
 
   useEffect(() => {
     if (auth.currentUser) {
-      navigate('/' + auth.currentUser.userType + '/dashboard');
+      navigate("/" + auth.currentUser.userType + "/dashboard");
     }
   }, [navigate]);
 
@@ -141,7 +149,12 @@ export default function Register() {
 
         <div className="auth-input-group">
           <label>Sign Up as</label>
-          <select className="auth-input" value={usertype} onChange={(e) => setUser(e.target.value)} required={true}>
+          <select
+            className="auth-input"
+            value={usertype}
+            onChange={(e) => setUser(e.target.value)}
+            required={true}
+          >
             <option value="">Select an option</option>
             <option value="Driver">Driver</option>
             <option value="Customer">Customer</option>
@@ -151,17 +164,26 @@ export default function Register() {
         {usertype === "Driver" && (
           <div className="auth-input-group">
             <label>Vehicle Type</label>
-            <select className="auth-input" value={vehicle} onChange={(e) => setVehicle(e.target.value)} required={true}>
+            <select
+              className="auth-input"
+              value={vehicle}
+              onChange={(e) => setVehicle(e.target.value)}
+              required={true}
+            >
               <option value="">Select an option</option>
-              <option value="Car">Car</option>
-              <option value="Truck">Truck</option>
-              <option value="Bike">Bike</option>
+              {vehicleTypes.map((vehicleType) => (
+                <option key={vehicleType} value={vehicleType}>
+                  {vehicleType}
+                </option>
+              ))}
             </select>
           </div>
         )}
 
         <div className="auth-btn-group">
-          <button type="submit" className="auth-btn">Sign Up</button>
+          <button type="submit" className="auth-btn">
+            Sign Up
+          </button>
         </div>
 
         <p className="auth-link">
@@ -171,4 +193,3 @@ export default function Register() {
     </div>
   );
 }
-
