@@ -1,4 +1,4 @@
-import { Box, Flex, SkeletonText, Text } from "@chakra-ui/react";
+import { Box, Flex, SkeletonText, Text, Button } from "@chakra-ui/react";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, database, db } from "../firebaseConfig/FirebaseConfig";
 import { ref, onValue, update, remove, set, off } from "firebase/database";
@@ -10,7 +10,7 @@ import {
   DirectionsRenderer,
 } from "@react-google-maps/api";
 import myLocationImg from "../../Images/mylocation.svg";
-
+import styles from '../../Style/DriverDash.module.css';
 const center = { lat: 28.5162618, lng: 77.1216273 };
 
 export default function DriverDash() {
@@ -259,106 +259,88 @@ export default function DriverDash() {
     return <SkeletonText />;
   }
 
-  return (
-    <Flex position="relative" flexDirection="row" h="100vh" w="100vw">
-      <Box
-        w="25%"
-        h="100%"
-        p={4}
-        bgColor="white"
-        shadow="base"
-        overflowY="auto"
-        zIndex="1"
-        borderRight="1px solid #ccc"
+  
+
+return (
+  <Flex className={styles.container}>
+    <Box className={styles.sidebar}>
+      <h2>Available Ride Requests</h2>
+      <ul className={styles.requestList}>
+        {rideRequests.length === 0 ? (
+          <Text>No available ride requests for your vehicle type.</Text>
+        ) : (
+          rideRequests.map((request) => (
+            <li
+              className={`${styles.requestItem} ${
+                selectedRide && selectedRide.id === request.id ? styles.selectedRequest : ''
+              }`}
+              onClick={() => handleRideClick(request)}
+            >
+              <p>
+                <strong>From:</strong> {request.source} <br />
+                <strong>To:</strong> {request.destination} <br />
+                <strong>Status:</strong> {request.status} <br />
+                <strong>Vehicle Type:</strong> {request.vehicle}
+              </p>
+              {request.status === "pending" && (
+                <Button onClick={() => handleAcceptRide(request.id)} className={styles.actionButton}>
+                  Accept Ride
+                </Button>
+              )}
+              {request.status === "accepted" && (
+                <Button onClick={() => handleRejectRide(request.id)} className={styles.actionButton}>
+                  Remove Acceptance
+                </Button>
+              )}
+              {request.status === "accepted" &&
+                request.driverId === auth.currentUser.uid && (
+                  <Button onClick={() => handleCollected(request.id)} className={styles.actionButton}>
+                    Goods Collected
+                  </Button>
+                )}
+              {request.status === "collected" &&
+                request.driverId === auth.currentUser.uid && (
+                  <Button onClick={() => handleDelivered(request.id)} className={styles.actionButton}>
+                    Goods Delivered
+                  </Button>
+                )}
+            </li>
+          ))
+        )}
+      </ul>
+    </Box>
+
+    <Box className={styles.mapContainer}>
+      <GoogleMap
+        center={center}
+        zoom={15}
+        mapContainerStyle={{ width: "100%", height: "100%" }}
+        options={{
+          zoomControl: true,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+        }}
+        onLoad={onLoad}
       >
-        <h2>Available Ride Requests</h2>
-        <ul style={{ listStyleType: "none", padding: 0 }}>
-          {rideRequests.length === 0 ? (
-            <Text>No available ride requests for your vehicle type.</Text>
-          ) : (
-            rideRequests.map((request) => (
-              <li
-                key={request.id}
-                style={{
-                  marginBottom: "10px",
-                  padding: "10px",
-                  border: "1px solid #ddd",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  backgroundColor:
-                    selectedRide && selectedRide.id === request.id
-                      ? "#f0f8ff"
-                      : "white",
-                }}
-                onClick={() => handleRideClick(request)}
-              >
-                <p>
-                  <strong>From:</strong> {request.source} <br />
-                  <strong>To:</strong> {request.destination} <br />
-                  <strong>Status:</strong> {request.status} <br />
-                  <strong>Vehicle Type:</strong> {request.vehicle}
-                </p>
-                {request.status === "pending" && (
-                  <button onClick={() => handleAcceptRide(request.id)}>
-                    Accept Ride
-                  </button>
-                )}
-                {request.status === "accepted" && (
-                  <button onClick={() => handleRejectRide(request.id)}>
-                    Remove Acceptance
-                  </button>
-                )}
-                {request.status === "accepted" &&
-                  request.driverId === auth.currentUser.uid && (
-                    <button onClick={() => handleCollected(request.id)}>
-                      Goods Collected
-                    </button>
-                  )}
-                {request.status === "collected" &&
-                  request.driverId === auth.currentUser.uid && (
-                    <button onClick={() => handleDelivered(request.id)}>
-                      Goods Delivered
-                    </button>
-                  )}
-              </li>
-            ))
-          )}
-        </ul>
+        {location && (
+          <Marker
+            position={{ lat: location.latitude, lng: location.longitude }}
+            icon={{
+              url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            }}
+          />
+        )}
+
+        {directionsResponse && (
+          <DirectionsRenderer directions={directionsResponse} />
+        )}
+      </GoogleMap>
+
+      <Box className={styles.myLocationButtonContainer}>
+        <MyLocationButton onClick={handleMyLocation} />
       </Box>
-
-      <Box position="relative" h="100%" w="75%">
-        <GoogleMap
-          center={center}
-          zoom={15}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
-          options={{
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-          }}
-          onLoad={onLoad}
-        >
-          {/* Show current location marker */}
-          {location && (
-            <Marker
-              position={{ lat: location.latitude, lng: location.longitude }}
-              icon={{
-                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-              }}
-            />
-          )}
-
-          {directionsResponse && (
-            <DirectionsRenderer directions={directionsResponse} />
-          )}
-        </GoogleMap>
-
-        {/* MyLocationButton positioned on the map */}
-        <Box position="absolute" bottom="10px" left="10px" zIndex="1">
-          <MyLocationButton onClick={handleMyLocation} />
-        </Box>
-      </Box>
-    </Flex>
-  );
+    </Box>
+  </Flex>
+);
 }
