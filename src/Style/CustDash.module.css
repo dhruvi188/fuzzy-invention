@@ -1,0 +1,58 @@
+.container {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    background-color: var(--chakra-colors-gray-100);
+  }
+  
+  .sidebar {
+    padding: 2.5rem;
+    border-radius: var(--chakra-radii-lg);
+    margin: 1rem;
+    background-color: white;
+    box-shadow: var(--chakra-shadows-xl);
+    max-width: 28rem;
+    z-index: 1;
+    width: 25%;
+  }
+  
+  .buttonGroup {
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .infoGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .fullWidthButton {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .driverInfo {
+    width: 100%;
+    background-color: var(--chakra-colors-teal-50);
+    border-radius: var(--chakra-radii-lg);
+    padding: 1rem;
+  }
+  
+  .mapContainer {
+    position: relative;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 75%;
+  }
+  
+  .myLocationButtonContainer {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1;
+  }
