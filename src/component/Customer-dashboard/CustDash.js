@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import {
   Box,
   Button,
-  Flex,
   HStack,
   VStack,
   IconButton,
@@ -14,7 +13,6 @@ import {
   Select,
   FormControl,
   FormLabel,
-  useToast,
   Divider,
   Heading,
   SkeletonText,
@@ -28,7 +26,8 @@ import {
   Autocomplete,
   DirectionsRenderer,
 } from "@react-google-maps/api";
-
+import { vehicleTypes } from "../../constants";
+import styles from '../../Style/CustDash.module.css';
 const center = { lat: 28.5162618, lng: 77.1216273 };
 
 export default function CustDash() {
@@ -51,7 +50,6 @@ export default function CustDash() {
   const [duration, setDuration] = useState("");
   const [reqSource, setReqSource] = useState("");
   const [reqDestination, setReqDestination] = useState("");
-  const [activeRideId, setActiveRideId] = useState(null);
   const destinationRef = useRef(null);
   const sourceRef = useRef(null);
   const originRef = useRef();
@@ -63,8 +61,10 @@ export default function CustDash() {
       let activeBooking = false;
       snapshot.forEach((childSnapshot) => {
         const request = childSnapshot.val();
-        if (request.customerId === auth.currentUser.uid && request.status !== "delivered") {
-
+        if (
+          request.customerId === auth.currentUser.uid &&
+          request.status !== "delivered"
+        ) {
           activeBooking = true;
           setDriverLocation(request.driverLocation || null);
           setDriverName(request.driverName || "");
@@ -93,7 +93,6 @@ export default function CustDash() {
     handleDriverLocation();
   }, [driverLocation]);
 
-
   const handleDestinationChange = () => {
     setDestination(destiantionRef.current.value);
   };
@@ -110,7 +109,9 @@ export default function CustDash() {
       return;
     }
 
-    const confirmRequest = window.confirm("Confirm that you want to request the ride");
+    const confirmRequest = window.confirm(
+      "Confirm that you want to request the ride"
+    );
     if (confirmRequest) {
       const rideRequestsRef = ref(database, "ride_requests");
       const newRideRequestRef = push(rideRequestsRef);
@@ -136,7 +137,6 @@ export default function CustDash() {
     }
   };
 
-
   const calculateRoute = async () => {
     if (originRef.current.value === "" || destiantionRef.current.value === "") {
       toast({
@@ -158,7 +158,7 @@ export default function CustDash() {
     setDirectionsResponse(results);
     setDistance(results.routes[0].legs[0].distance.text);
     setDuration(results.routes[0].legs[0].duration.text);
-  }
+  };
   const handleCancelRide = () => {
     if (!hasActiveBooking) {
       toast.warning("You don't have an active booking to cancel.", {
@@ -167,38 +167,44 @@ export default function CustDash() {
       return;
     }
 
-    const confirmCancel = window.confirm("Confirm you want to cancel the ride?");
+    const confirmCancel = window.confirm(
+      "Confirm you want to cancel the ride?"
+    );
     if (confirmCancel) {
       const rideRequestsRef = ref(database, "ride_requests");
 
-      onValue(rideRequestsRef, (snapshot) => {
-        snapshot.forEach((childSnapshot) => {
-          const request = childSnapshot.val();
-          if (request.customerId === auth.currentUser.uid) {
-            remove(childSnapshot.ref)
-              .then(() => {
-                toast.success("Ride request canceled successfully.", {
-                  position: "top-center",
+      onValue(
+        rideRequestsRef,
+        (snapshot) => {
+          snapshot.forEach((childSnapshot) => {
+            const request = childSnapshot.val();
+            if (request.customerId === auth.currentUser.uid) {
+              remove(childSnapshot.ref)
+                .then(() => {
+                  toast.success("Ride request canceled successfully.", {
+                    position: "top-center",
+                  });
+                  setSource("");
+                  setDestination("");
+                  setSelectedVehicle("");
+                  setDriverLocation(null);
+                  setDriverName("");
+                  setDriverContact("");
+                  setStatus("");
+                  setHasActiveBooking(false);
+                  setReqSource("");
+                  setReqDestination("");
+                })
+                .catch((error) => {
+                  toast.error(`Error canceling ride: ${error.message}`, {
+                    position: "top-center",
+                  });
                 });
-                setSource("");
-                setDestination("");
-                setSelectedVehicle("");
-                setDriverLocation(null);
-                setDriverName("");
-                setDriverContact("");
-                setStatus("");
-                setHasActiveBooking(false);
-                setReqSource("");
-                setReqDestination("");
-              })
-              .catch((error) => {
-                toast.error(`Error canceling ride: ${error.message}`, {
-                  position: "top-center",
-                });
-              });
-          }
-        });
-      }, { onlyOnce: true }); // This ensures the callback only runs once
+            }
+          });
+        },
+        { onlyOnce: true }
+      );
     }
   };
 
@@ -208,7 +214,7 @@ export default function CustDash() {
     setDuration("");
     originRef.current.value = "";
     destiantionRef.current.value = "";
-  }
+  };
   const handleDriverLocation = () => {
     if (driverLocation && map) {
       map.panTo({
@@ -218,8 +224,6 @@ export default function CustDash() {
       map.setZoom(15);
     }
   };
-
-
 
   const MyLocationButton = ({ onClick }) => {
     return (
@@ -240,88 +244,74 @@ export default function CustDash() {
     return <SkeletonText />;
   }
 
-  return (
-    <Flex
-      position="relative"
-      flexDirection="row"
-      alignItems="center"
-      h="100vh"
-      w="100vw"
-      bg="gray.100" 
-    >
-      <Box
-        p={10}
-        borderRadius="lg"
-        m={4}
-        bgColor="white"
-        shadow="xl" 
-        maxW="md"
-        zIndex="1"
-        w="25%"
-      >
-        <VStack spacing={8}>
-          <Heading size="lg" color="teal.600" textAlign="center">
-            Request a Ride
-          </Heading>
-          <Divider borderColor="teal.300" />
-
-          <FormControl>
-            <FormLabel>Origin</FormLabel>
-            <Autocomplete
-              onLoad={(autocomplete) => (sourceRef.current = autocomplete)}
-              onPlaceChanged={handleSourceChange}
-            >
-              <Input placeholder="Enter origin" ref={originRef} />
-            </Autocomplete>
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Destination</FormLabel>
-            <Autocomplete
-              onLoad={(autocomplete) => (destinationRef.current = autocomplete)}
-              onPlaceChanged={handleDestinationChange}
-            >
-              <Input placeholder="Enter destination" ref={destiantionRef} />
-            </Autocomplete>
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Select Vehicle</FormLabel>
-            <Select
-              placeholder="Choose vehicle"
-              value={selectedVehicle}
-              onChange={(e) => setSelectedVehicle(e.target.value)}
-            >
-              <option value="Car">Car</option>
-              <option value="Bike">Bike</option>
-              <option value="Truck">Truck</option>
-            </Select>
-          </FormControl>
-
-          <Divider borderColor="teal.300" />
-
-          <HStack justify="space-between" w="100%" mt={4}>
-            <Button
-              colorScheme="teal"
-              onClick={calculateRoute}
-              isDisabled={hasActiveBooking}
-              leftIcon={<FaRoad />}
-            >
-              Calculate Route
-            </Button>
-            <IconButton
-              aria-label="clear route"
-              icon={<FaTimes />}
-              onClick={clearRoute}
-              isDisabled={hasActiveBooking}
-              colorScheme="red"
-            />
-          </HStack>
-
-          <HStack w="100%" justify="space-between">
-            <Text fontSize="md">Distance: {distance}</Text>
-            <Text fontSize="md">Duration: {duration}</Text>
-            <Text fontSize="md">
+    return (
+      <Box className={styles.container}>
+        <Box className={styles.sidebar}>
+          <VStack spacing={8}>
+            <Heading size="lg" color="teal.600" textAlign="center">
+              Request a Ride
+            </Heading>
+            <Divider borderColor="teal.300" />
+  
+            <FormControl>
+              <FormLabel>Origin</FormLabel>
+              <Autocomplete
+                onLoad={(autocomplete) => (sourceRef.current = autocomplete)}
+                onPlaceChanged={handleSourceChange}
+              >
+                <Input placeholder="Enter origin" ref={originRef} />
+              </Autocomplete>
+            </FormControl>
+  
+            <FormControl>
+              <FormLabel>Destination</FormLabel>
+              <Autocomplete
+                onLoad={(autocomplete) => (destinationRef.current = autocomplete)}
+                onPlaceChanged={handleDestinationChange}
+              >
+                <Input placeholder="Enter destination" ref={destiantionRef} />
+              </Autocomplete>
+            </FormControl>
+  
+            <FormControl>
+              <FormLabel>Select Vehicle</FormLabel>
+              <Select
+                placeholder="Choose vehicle"
+                value={selectedVehicle}
+                onChange={(e) => setSelectedVehicle(e.target.value)}
+              >
+                {vehicleTypes.map((vehicleType) => (
+                  <option key={vehicleType} value={vehicleType}>
+                    {vehicleType}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+  
+            <Divider borderColor="teal.300" />
+  
+            <HStack className={styles.buttonGroup}>
+              <Button
+                colorScheme="teal"
+                onClick={calculateRoute}
+                isDisabled={hasActiveBooking}
+                leftIcon={<FaRoad />}
+              >
+                Calculate Route
+              </Button>
+              <IconButton
+                aria-label="clear route"
+                icon={<FaTimes />}
+                onClick={clearRoute}
+                isDisabled={hasActiveBooking}
+                colorScheme="red"
+              />
+            </HStack>
+  
+            <HStack className={styles.infoGroup}>
+              <Text fontSize="md">Distance: {distance}</Text>
+              <Text fontSize="md">Duration: {duration}</Text>
+              <Text fontSize="md">
               Cost:{" "}
               {(
                 (parseFloat(duration) * 13 + 30) *
@@ -329,84 +319,82 @@ export default function CustDash() {
                   selectedVehicle === "Car"
                     ? 1.0
                     : selectedVehicle === "Bike"
-                      ? 0.8
-                      : 1.2
+                    ? 0.8
+                    : 1.2
                 )
               ).toFixed(2)}
             </Text>
-          </HStack>
-
-          <Button
-            colorScheme="pink"
-            size="lg"
-            w="full"
-            mt={4}
-            onClick={handleRequestRide}
-            isDisabled={hasActiveBooking}
+            </HStack>
+  
+            <Button
+              colorScheme="pink"
+              size="lg"
+              className={styles.fullWidthButton}
+              onClick={handleRequestRide}
+              isDisabled={hasActiveBooking}
+            >
+              {hasActiveBooking ? "Ride in Progress" : "Request Ride"}
+            </Button>
+            <Button
+              colorScheme="red"
+              size="lg"
+              className={styles.fullWidthButton}
+              onClick={handleCancelRide}
+              isDisabled={status !== "pending" && status !== "accepted"}
+            >
+              Cancel Ride
+            </Button>
+  
+            <Heading size="md" color="teal.600">
+              Requested Ride Information
+            </Heading>
+            {driverName && (
+              <Box className={styles.driverInfo}>
+                <VStack align="center">
+                  <Text fontSize="md">Driver Name: {driverName}</Text>
+                  <Text fontSize="md">Driver Contact: {driverContact}</Text>
+                </VStack>
+              </Box>
+            )}
+            <Text fontSize="md">Source: {reqSource}</Text>
+            <Text fontSize="md">Destination: {reqDestination}</Text>
+            <Text fontSize="md">Status: {status}</Text>
+          </VStack>
+        </Box>
+  
+        <Box className={styles.mapContainer}>
+          <GoogleMap
+            center={center}
+            zoom={15}
+            mapContainerStyle={{ width: "100%", height: "100%" }}
+            options={{
+              zoomControl: true,
+              streetViewControl: false,
+              mapTypeControl: false,
+              fullscreenControl: false,
+            }}
+            onLoad={onLoad}
           >
-            {hasActiveBooking ? "Ride in Progress" : "Request Ride"}
-          </Button>
-          <Button
-            colorScheme="red"
-            size="lg"
-            w="full"
-            mt={4}
-            onClick={handleCancelRide}
-            isDisabled={status !== "pending" && status !== "accepted"}
-          >
-            Cancel Ride
-          </Button>
-
-          <Heading size="md" color="teal.600">
-            Requested Ride Information
-          </Heading>
-          {driverName && (
-            <Box w="100%" bg="teal.50" borderRadius="lg" p={4}>
-              <VStack align="center">
-                <Text fontSize="md">Driver Name: {driverName}</Text>
-                <Text fontSize="md">Driver Contact: {driverContact}</Text>
-              </VStack>
-            </Box>
-          )}
-          <Text fontSize="md">Source: {reqSource}</Text>
-          <Text fontSize="md">Destination: {reqDestination}</Text>
-          <Text fontSize="md">Status: {status}</Text>
-        </VStack>
-      </Box>
-
-      <Box position="relative" left={0} top={0} h="100%" w="75%">
-        <GoogleMap
-          center={center}
-          zoom={15}
-          mapContainerStyle={{ width: "100%", height: "100%" }}
-          options={{
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-          }}
-          onLoad={onLoad}
-        >
-          <Marker position={center} />
-          {directionsResponse && (
-            <DirectionsRenderer directions={directionsResponse} />
-          )}
-          {driverLocation && (
-            <Marker
-              position={{
-                lat: driverLocation.latitude,
-                lng: driverLocation.longitude,
-              }}
-              icon={{
-                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-              }}
-            />
-          )}
-        </GoogleMap>
-        <Box position="absolute" bottom="10px" left="10px" zIndex="1">
-          <MyLocationButton onClick={handleDriverLocation} />
+            <Marker position={center} />
+            {directionsResponse && (
+              <DirectionsRenderer directions={directionsResponse} />
+            )}
+            {driverLocation && (
+              <Marker
+                position={{
+                  lat: driverLocation.latitude,
+                  lng: driverLocation.longitude,
+                }}
+                icon={{
+                  url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                }}
+              />
+            )}
+          </GoogleMap>
+          <Box className={styles.myLocationButtonContainer}>
+            <MyLocationButton onClick={handleDriverLocation} />
+          </Box>
         </Box>
       </Box>
-    </Flex>
-  );
+    );
 }
